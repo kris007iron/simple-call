@@ -15,6 +15,16 @@ int main()
     player.setPosition(sf::Vector2f(960.f, 540.f));
 
 
+    sf::Texture gunTexture;
+    gunTexture.loadFromFile("images/gun.png");
+    sf::Sprite gun(gunTexture);
+    gun.setOrigin(sf::Vector2f(
+        gunTexture.getSize().x / 2.f,
+        gunTexture.getSize().y / 2.f)
+    );
+    gun.setScale(sf::Vector2f(15.f, 15.f));
+    gun.setPosition(sf::Vector2f(960.f/2.f, 540.f/2.f));
+
     sf::Clock clock; //for a delta time between frames
     const float speedMulitplier = 300.0f;
     while (window.isOpen())
@@ -27,6 +37,8 @@ int main()
                 window.close();
         }
 
+        sf::Vector2f vMousePosition = (sf::Vector2f)sf::Mouse::getPosition(window);
+        gun.setPosition(vMousePosition);
         //input from user
         sf::Vector2f vRequestedPlayerMovement(0.0f, 0.0f);
 
@@ -50,6 +62,7 @@ int main()
 
         window.clear();
         window.draw(player);
+        window.draw(gun);
         window.display();
     }
 }
