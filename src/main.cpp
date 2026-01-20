@@ -1,6 +1,5 @@
 #include <SFML/Graphics.hpp>
 
-
 int main()
 {
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Simple call!");
@@ -27,6 +26,7 @@ int main()
 
     sf::Clock clock; //for a delta time between frames
     const float speedMulitplier = 300.0f;
+    const float gunDistance = 50.0f;
     while (window.isOpen())
     {
         sf::Time deltaTime = clock.restart();
@@ -37,8 +37,6 @@ int main()
                 window.close();
         }
 
-        sf::Vector2f vMousePosition = (sf::Vector2f)sf::Mouse::getPosition(window);
-        gun.setPosition(vMousePosition);
         //input from user
         sf::Vector2f vRequestedPlayerMovement(0.0f, 0.0f);
 
@@ -59,6 +57,14 @@ int main()
         }
 
         player.move(vRequestedPlayerMovement*deltaTime.asSeconds() * speedMulitplier);
+
+        //to draw correclty we need to perform offest after player was moved
+        sf::Vector2f vMousePosition = (sf::Vector2f)sf::Mouse::getPosition(window);
+        sf::Vector2f vPlayerToMouse = vMousePosition - player.getPosition();
+        //get a vector from mouse to player normalize it and multiply to chose distance
+
+        gun.setPosition(player.getPosition() + (vPlayerToMouse.normalized() * gunDistance));
+
 
         window.clear();
         window.draw(player);
