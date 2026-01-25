@@ -19,11 +19,21 @@ struct Bullet
     }
 };
 
+struct Enemy{};
+
+struct EnemyBullet{};
+
+
 
 
 
 std::vector<Bullet> bullets;
 const float bulletSpeed = 1000.f;
+
+std::vector<EnemyBullet> enemyBullets;
+
+std::vector<Enemy> enemys;
+
 sf::Clock shootClock;
 const float shootDelay = 0.15f;
 
@@ -116,7 +126,7 @@ void drawBullets(sf::RenderWindow& window, const std::vector<Bullet>& bullets)
 }
 
 
-void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
+static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
 {
     window.clear();
     window.draw(player);
@@ -130,20 +140,32 @@ int main()
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Simple call!");
 
     sf::Texture playerTexture;
-    playerTexture.loadFromFile("images/test-player.png");
+    if (!playerTexture.loadFromFile("images/test-player.png")) {
+        std::cerr << "Failed to load image\n";
+    }
     sf::Sprite player(playerTexture);
     player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
     player.setScale(sf::Vector2f(20.f, 20.f));
     player.setPosition(sf::Vector2f(960.f, 540.f));
 
     sf::Texture gunTexture;
-    gunTexture.loadFromFile("images/gun.png");
+    if (!gunTexture.loadFromFile("images/gun.png")) {
+        std::cerr << "Failed to load image\n";        
+    }
     sf::Sprite gun(gunTexture);
     gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
     gun.setScale(sf::Vector2f(15.f, 15.f));
 
     sf::Texture bulletTexture;
-    bulletTexture.loadFromFile("images/bullet.png");
+    if (!bulletTexture.loadFromFile("images/bullet.png")) {
+        std::cerr << "Failed to load image\n";
+    }
+
+    sf::Texture enemyTexture;
+    if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
+        std::cerr << "Failed to load image\n";
+    }
+
     sf::Clock clock;
     const float speedMultiplier = 300.f;
     const float gunDistance = 200.f;
