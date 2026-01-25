@@ -7,19 +7,8 @@ MapGenerator::MapGenerator(int w, int h) : width(w), height(h) {
     reset();
 }
 
-void MapGenerator::reset() {
-    grid.assign(height, std::vector<Tile>(width, WALL));
-    rooms.clear();
-
-    generate(0, 0, width, height, 5);
-
-    for (size_t i = 0; i < rooms.size() - 1; ++i) {
-        connectRooms(rooms[i], rooms[i + 1]);
-    }
-}
-
 void MapGenerator::loadPresets() {
-   
+
     library.push_back({ 11, 11, {
         "...........",
         ".#.......#.",
@@ -81,6 +70,93 @@ void MapGenerator::loadPresets() {
         "..#..",
         "....."
     } });
+
+    library.push_back({ 11, 11, {
+    "###########",
+    "#....*....#",
+    "#.........#",
+    "#..###.###.#",
+    "#..#.....#.#",
+    "#..###.###.#",
+    "#.........#",
+    "#....*....#",
+    "#.........#",
+    "#....*....#",
+    "###########"
+    } });
+
+    library.push_back({ 9, 9, {
+    "#########",
+    "#*.....*#",
+    "#.#####.#",
+    "#.......#",
+    "#.#####.#",
+    "#.......#",
+    "#.#####.#",
+    "#*.....*#",
+    "#########"
+} });
+
+    library.push_back({ 13, 7, {
+    "#############",
+    "#*....#....*#",
+    "#####.#.#####",
+    "#...........#",
+    "#####.#.#####",
+    "#*....#....*#",
+    "#############"
+} });
+
+    library.push_back({ 7, 7, {
+    "#######",
+    "#..*..#",
+    "#.###.#",
+    "#*...*#",
+    "#.###.#",
+    "#..*..#",
+    "#######"
+} });
+
+    library.push_back({ 11, 5, {
+    "###########",
+    "#..*...*..#",
+    "#.........#",
+    "#..*...*..#",
+    "###########"
+} });
+
+    library.push_back({ 9, 7, {
+    "#########",
+    "#..*....#",
+    "#.#####.#",
+    "#..*....#",
+    "#.#####.#",
+    "#....*..#",
+    "#########"
+} });
+
+    library.push_back({ 9, 9, {
+    "#########",
+    "#..***..#",
+    "#.#####.#",
+    "#*.....*#",
+    "#*.....*#",
+    "#*.....*#",
+    "#.#####.#",
+    "#..***..#",
+    "#########"
+} });
+
+    library.push_back({ 9, 7, {
+    "#########",
+    "#*.....*#",
+    "#...E...#",
+    "#.......#",
+    "#*.....*#",
+    "#.......#",
+    "#########"
+} });
+
 }
 
 void MapGenerator::generate(int x, int y, int w, int h, int depth) {
@@ -124,17 +200,42 @@ void MapGenerator::createRoom(int x, int y, int w, int h) {
         for (int py = 0; py < p.height; ++py) {
             for (int px = 0; px < p.width; ++px) {
 
-                if (p.layout[py][px] == '.') {
-                    grid[ry + py][rx + px] = FLOOR;
-                }
-                else {
-                    grid[ry + py][rx + px] = WALL;
+                char c = p.layout[py][px];
+                int gx = ry + py;
+                int gy = rx + px;
+
+                switch (c) {
+                case '.':
+                    grid[gx][gy] = FLOOR;
+                    break;
+                case '#':
+                    grid[gx][gy] = WALL;
+                    break;
+                case '*':
+                    grid[gx][gy] = FLOOR;
+                    enemySpawns.push_back({ gy, gx, "enemy" });
+                    break;
+                case 'E':
+                    if (!exitPlaced) {
+                        grid[gx][gy] = FLOOR;
+                        exits.push_back({ gy, gx });
+                        exitPlaced = true;
+                    }
+                    else {
+                        grid[gx][gy] = FLOOR;
+                    }
+                    break;
+                default:
+                    grid[gx][gy] = WALL;
+                    break;
                 }
             }
         }
+
         rooms.push_back({ rx, ry, p.width, p.height });
     }
 }
+
 
 void MapGenerator::connectRooms(Room a, Room b) {
     int sx = a.x + a.w / 2, sy = a.y + a.h / 2;
@@ -170,3 +271,42 @@ int MapGenerator::getWallMask(int x, int y) const {
     if (x < width - 1 && grid[y][x + 1] == WALL) m += 8;
     return m;
 }
+
+void MapGenerator::reset() {
+    grid.assign(height, std::vector<Tile>(width, WALL));
+    rooms.clear();
+    enemySpawns.clear();
+    exits.clear();
+    respawns.clear();
+    exitPlaced = false;
+    spawnPlaced = false;
+
+    generate(0, 0, width, height, 5);
+
+    for (size_t i = 0; i < rooms.size() - 1; ++i)
+        connectRooms(rooms[i], rooms[i + 1]);
+
+    // Exit
+    if (!exitPlaced && !rooms.empty()) {
+        const Room& r = rooms.back();
+        int ex = r.x + r.w / 2;
+        int ey = r.y + r.h / 2;
+        exits.push_back({ ex, ey });
+        grid[ey][ex] = FLOOR;
+        exitPlaced = true;
+    }
+
+    // Respawn tylko w pierwszym pokoju
+    if (!rooms.empty()) {
+        const Room& firstRoom = rooms[0];
+        int spawnX = firstRoom.x + firstRoom.w / 2;
+        int spawnY = firstRoom.y + firstRoom.h / 2;
+        respawns.push_back({ spawnX, spawnY });
+        spawnPlaced = true;
+    }
+}
+
+
+
+
+

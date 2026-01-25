@@ -5,33 +5,19 @@ MapRenderer::MapRenderer(const MapGenerator& m)
     tileset(),
     sprite(tileset)
 {
-    if (tileset.loadFromFile("assets/jan.png")) {
+    if (tileset.loadFromFile("C:\\Users\\User\\Desktop\\studia\\simple-call\\assets\\jan.png")) {
         // Tekstura jest ju¿ powi¹zana, loadFromFile j¹ po prostu wype³ni danymi
     }
     initWallTiles();
 }
 
 void MapRenderer::initWallTiles() {
-    auto rect = [](int x, int y) {
-        return sf::IntRect({ x, y }, { 32, 32 });
-        };
+    sf::IntRect singleTile({ 0, 0 }, { 32, 32 });
 
-    wallTiles[0] = rect(0, 0);
-    wallTiles[1] = rect(32, 0);
-    wallTiles[2] = rect(64, 0);
-    wallTiles[3] = rect(96, 0);
-    wallTiles[4] = rect(0, 32);
-    wallTiles[5] = rect(32, 32);
-    wallTiles[6] = rect(64, 32);
-    wallTiles[7] = rect(96, 32);
-    wallTiles[8] = rect(0, 64);
-    wallTiles[9] = rect(32, 64);
-    wallTiles[10] = rect(64, 64);
-    wallTiles[11] = rect(96, 64);
-    wallTiles[12] = rect(0, 96);
-    wallTiles[13] = rect(32, 96);
-    wallTiles[14] = rect(64, 96);
-    wallTiles[15] = rect(96, 96);
+    // Ka¿dy rodzaj œciany u¿ywa tej samej grafiki 32x32
+    for (int i = 0; i < 16; ++i) {
+        wallTiles[i] = singleTile;
+    }
 }
 
 void MapRenderer::draw(sf::RenderWindow& window) {
@@ -40,14 +26,17 @@ void MapRenderer::draw(sf::RenderWindow& window) {
             Tile t = map.grid[y][x];
 
             if (t == FLOOR) {
-         
-                sprite.setTextureRect(sf::IntRect({ 0, 128 }, { 32, 32 }));
+                // RYSOWANIE BIA£EJ POD£OGI
+                sprite.setTextureRect(sf::IntRect()); // Czyœcimy obszar tekstury (brak grafiki)
+                sprite.setColor(sf::Color::White);    // Ustawiamy kolor na bia³y
             }
             else {
+                // RYSOWANIE ŒCIANY Z TEKSTURY 32x32
+                sprite.setColor(sf::Color::White);    // Upewniamy siê, ¿e kolor jest bia³y (¿eby nie barwi³ tekstury)
                 int mask = map.getWallMask(x, y);
-                if (wallTiles.contains(mask)) {
-                    sprite.setTextureRect(wallTiles[mask]);
-                }
+
+                // Poniewa¿ masz teksturê 32x32, zawsze u¿ywamy tego samego prostok¹ta
+                sprite.setTextureRect(sf::IntRect({ 0, 0 }, { 32, 32 }));
             }
 
             sprite.setPosition({

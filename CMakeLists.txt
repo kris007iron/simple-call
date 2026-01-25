@@ -16,7 +16,7 @@ FetchContent_Declare(SFML
 )
 FetchContent_MakeAvailable(SFML)
 
-add_executable(main src/main.cpp "src/game/Game.cpp" "src/map/Map.cpp" "src/map/map_renderer/MapRenderer.cpp")
+add_executable(main src/main.cpp "src/game/Game.cpp" "src/map/Map.cpp" "src/map/map_renderer/MapRenderer.cpp" "src/enemy/Enemy.cpp" "src/enemy/EnemyManager.cpp" "src/map/exit_renderer/ExitRenderer.cpp" "src/map/respawn_renderer/RespawnRenderer.cpp")
 
 target_link_libraries(main PRIVATE
     SFML::Graphics

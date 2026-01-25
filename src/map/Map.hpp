@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 
-// Podstawowe typy danych u¿ywane w ca³ym projekcie
 enum Tile { WALL, FLOOR };
 
 struct Room {
@@ -15,28 +14,48 @@ struct RoomPreset {
     std::vector<std::string> layout;
 };
 
+struct ExitPoint {
+    int x, y;
+};
+
+struct SpawnPoint {
+    int x, y;
+    std::string type;
+};
+
+struct RespawnPoint {
+    int x;
+    int y;
+};
+
 class MapGenerator {
 public:
-    // Dane publiczne, do których dostêp bêdzie mia³a klasa Game
+    MapGenerator(int w, int h);
+
+    // Dane publiczne
     std::vector<std::vector<Tile>> grid;
     std::vector<Room> rooms;
     std::vector<RoomPreset> library;
+    std::vector<ExitPoint> exits;
+    std::vector<SpawnPoint> enemySpawns;
+    std::vector<RespawnPoint> respawns;
 
     int width;
     int height;
 
-    // Konstruktor i g³ówne metody
-    MapGenerator(int w, int h);
     void reset();
     int getWallMask(int x, int y) const;
 
 private:
+    bool exitPlaced = false;
+
+    bool spawnPlaced = false;
+
     void loadPresets();
     void generate(int x, int y, int w, int h, int depth);
     void createRoom(int x, int y, int w, int h);
     void connectRooms(Room a, Room b);
 
-    //pomocniczne do rysowania
     void drawHLine(int x1, int x2, int y);
     void drawVLine(int y1, int y2, int x);
 };
