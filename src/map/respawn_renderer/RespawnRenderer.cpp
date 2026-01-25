@@ -8,7 +8,7 @@ RespawnRenderer::RespawnRenderer(float tileSize)
 }
 
 void RespawnRenderer::draw(sf::RenderWindow& window, const MapGenerator& map) {
-    for (auto& r : map.respawns) {
+    for (const auto& r : map.respawns) {
         m_spawnShape.setPosition(sf::Vector2f(r.x * m_tileSize, r.y * m_tileSize));
         window.draw(m_spawnShape);
     }
