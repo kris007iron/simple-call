@@ -1,6 +1,33 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 
+struct Bullet
+{
+    sf::Sprite sprite;
+    sf::Vector2f velocity;
+
+    Bullet(const sf::Texture& tex,
+        sf::Vector2f position,
+        sf::Vector2f vel)
+        : sprite(tex), velocity(vel)
+    {
+        sprite.setOrigin(
+            { tex.getSize().x / 2.f,
+            tex.getSize().y / 2.f }
+        );
+        sprite.setPosition(position);
+    }
+};
+
+
+
+
+std::vector<Bullet> bullets;
+const float bulletSpeed = 1000.f;
+sf::Clock shootClock;
+const float shootDelay = 0.15f;
+
+
 sf::Vector2f getPlayerInput()
 {
     sf::Vector2f movement(0.f, 0.f);
@@ -41,12 +68,60 @@ void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, fl
     gun.setPosition(player.getPosition() + playerToMouse.normalized() * gunDistance);
 }
 
+void shoot(std::vector<Bullet>& bullets,
+           const sf::Sprite& gun,
+           const sf::Sprite& player,
+           const sf::RenderWindow& window,
+           const sf::Texture& bulletTexture)
+{
+    sf::Vector2f mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
+    sf::Vector2f dir = mousePos - player.getPosition();
+    dir = dir.normalized();
+    
+
+    bullets.emplace_back(
+        bulletTexture,
+        gun.getPosition(),
+        dir * bulletSpeed
+    );
+    bullets.back().sprite.rotate(dir.angle());
+}
+
+void updateBullets(std::vector<Bullet>& bullets,
+    float dt,
+    const sf::RenderWindow& window)
+{
+    const sf::Vector2u size = window.getSize();
+
+    bullets.erase(
+        std::remove_if(bullets.begin(), bullets.end(),
+            [&](const Bullet& b)
+            {
+                sf::Vector2f p = b.sprite.getPosition();
+                return p.x < 0 || p.x > size.x ||
+                    p.y < 0 || p.y > size.y;
+            }),
+        bullets.end()
+    );
+
+    for (auto& b : bullets)
+        b.sprite.move(b.velocity * dt);
+}
+
+
+void drawBullets(sf::RenderWindow& window, const std::vector<Bullet>& bullets)
+{
+    for (const auto& b : bullets)
+        window.draw(b.sprite);
+}
+
 
 void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
 {
     window.clear();
     window.draw(player);
     window.draw(gun);
+    drawBullets(window, bullets);
     window.display();
 }
 
@@ -67,6 +142,8 @@ int main()
     gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
     gun.setScale(sf::Vector2f(15.f, 15.f));
 
+    sf::Texture bulletTexture;
+    bulletTexture.loadFromFile("images/bullet.png");
     sf::Clock clock;
     const float speedMultiplier = 300.f;
     const float gunDistance = 200.f;
@@ -82,8 +159,17 @@ int main()
         }
 
         sf::Vector2f movement = getPlayerInput();
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
+            shootClock.getElapsedTime().asSeconds() > shootDelay)
+        {
+            shoot(bullets, gun, player, window, bulletTexture);
+            shootClock.restart();
+        }
         updatePlayer(player, movement, dt, speedMultiplier);
         updateGun(gun, player, window, gunDistance);
+        updateBullets(bullets, dt, window);
         render(window, player, gun);
+
     }
 }
