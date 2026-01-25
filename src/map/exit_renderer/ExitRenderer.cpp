@@ -13,4 +13,4 @@ void ExitRenderer::draw(sf::RenderWindow& window, const MapGenerator& map) {
         window.draw(m_exitShape);
     }
 }
-\   
+   
