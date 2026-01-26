@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include "enemy/Enemy.h"
 
 struct Bullet
 {
@@ -18,8 +19,6 @@ struct Bullet
         sprite.setPosition(position);
     }
 };
-
-struct Enemy{};
 
 struct EnemyBullet{};
 
@@ -131,14 +130,14 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     window.clear();
     window.draw(player);
     window.draw(gun);
-    drawBullets(window, bullets);
+    drawBullets(window, bullets);    
     window.display();
 }
+
 
 int main()
 {
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Simple call!");
-
     sf::Texture playerTexture;
     if (!playerTexture.loadFromFile("images/test-player.png")) {
         std::cerr << "Failed to load image\n";
@@ -165,6 +164,8 @@ int main()
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
         std::cerr << "Failed to load image\n";
     }
+    Enemy enemy(enemyTexture, { 960.f, 540.f });
+    initEnemy(enemy, enemyTexture, { 960.f, 540.f });
 
     sf::Clock clock;
     const float speedMultiplier = 300.f;
@@ -188,10 +189,12 @@ int main()
             shoot(bullets, gun, player, window, bulletTexture);
             shootClock.restart();
         }
+        updateEnemy(enemy, dt);
+
         updatePlayer(player, movement, dt, speedMultiplier);
         updateGun(gun, player, window, gunDistance);
         updateBullets(bullets, dt, window);
+        drawEnemy(enemy, window);
         render(window, player, gun);
-
     }
 }
