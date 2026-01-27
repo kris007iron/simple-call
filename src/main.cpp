@@ -1,6 +1,11 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <iostream>
-#include "enemy/Enemy.h"
+#include "map/Map.hpp"
+#include "map/map_renderer/MapRenderer.hpp"
+#include "enemy/EnemyManager.hpp"
+#include "map/exit_renderer/ExitRenderer.hpp"
+#include "map/respawn_renderer/RespawnRenderer.hpp"
 
 struct Bullet
 {
@@ -15,7 +20,7 @@ struct Bullet
         sprite.setOrigin(
             { tex.getSize().x / 2.f,
             tex.getSize().y / 2.f }
-        );
+        );        
         sprite.setPosition(position);
     }
 };
@@ -31,11 +36,17 @@ const float bulletSpeed = 1000.f;
 
 std::vector<EnemyBullet> enemyBullets;
 
-std::vector<Enemy> enemys;
+//std::vector<Enemy> enemys;
 
 sf::Clock shootClock;
 const float shootDelay = 0.15f;
+sf::View m_view;
 
+MapGenerator m_map(100,100);
+MapRenderer m_renderer(m_map);
+EnemyManager m_enemyManager;
+ExitRenderer m_exitRenderer(32.f);
+RespawnRenderer m_respawnRenderer(32.f);
 
 sf::Vector2f getPlayerInput()
 {
@@ -53,26 +64,28 @@ sf::Vector2f getPlayerInput()
     return movement;
 }
 
-void updatePlayer(sf::Sprite& player, sf::Vector2f movement, float dt, float speed)
+void updatePlayer(sf::Sprite& player, sf::Vector2f movement, float dt, float speed, sf::View view)
 {
+    /*view.move(movement * dt * speed);*/
     player.move(movement * dt * speed);
 }
 
 void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, float gunDistance)
 {
     //calculating the vector of gun postion based on mouse movement
-    sf::Vector2f mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
-    sf::Vector2f playerToMouse = mousePos - player.getPosition();
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    sf::Vector2f worldPos = window.mapPixelToCoords(mousePos);
+    sf::Vector2f playerToMouse = worldPos - player.getPosition();
     //for sprite flipping use negative scale values
     //we will calculate the angle of rotation based on our position vector
     gun.setRotation(playerToMouse.angle());
     if (gun.getRotation().asDegrees() > 90.0f && gun.getRotation().asDegrees() < 270.0f) {
-        gun.setScale(sf::Vector2f(15.f, -15.f));
-        player.setScale(sf::Vector2f(-20.f, 20.f));
+        gun.setScale(sf::Vector2f(1.f, -1.f));
+        player.setScale(sf::Vector2f(-1.f, 1.f));
     }
     else{
-        gun.setScale(sf::Vector2f(15.f, 15.f));
-        player.setScale(sf::Vector2f(20.f, 20.f));
+        gun.setScale(sf::Vector2f(1.f, 1.f));
+        player.setScale(sf::Vector2f(1.f, 1.f));
     }
     gun.setPosition(player.getPosition() + playerToMouse.normalized() * gunDistance);
 }
@@ -83,8 +96,9 @@ void shoot(std::vector<Bullet>& bullets,
            const sf::RenderWindow& window,
            const sf::Texture& bulletTexture)
 {
-    sf::Vector2f mousePos = (sf::Vector2f)sf::Mouse::getPosition(window);
-    sf::Vector2f dir = mousePos - player.getPosition();
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    sf::Vector2f worldPos = window.mapPixelToCoords(mousePos);
+    sf::Vector2f dir = worldPos - player.getPosition();
     dir = dir.normalized();
     
 
@@ -94,15 +108,17 @@ void shoot(std::vector<Bullet>& bullets,
         dir * bulletSpeed
     );
     bullets.back().sprite.rotate(dir.angle());
+    std::cout << bullets[0].velocity.angle().asDegrees();
 }
 
 void updateBullets(std::vector<Bullet>& bullets,
     float dt,
     const sf::RenderWindow& window)
 {
+    //TODO: deletion based on collision not based on window size 
     const sf::Vector2u size = window.getSize();
 
-    bullets.erase(
+    /*bullets.erase(
         std::remove_if(bullets.begin(), bullets.end(),
             [&](const Bullet& b)
             {
@@ -111,7 +127,7 @@ void updateBullets(std::vector<Bullet>& bullets,
                     p.y < 0 || p.y > size.y;
             }),
         bullets.end()
-    );
+    );*/
 
     for (auto& b : bullets)
         b.sprite.move(b.velocity * dt);
@@ -128,9 +144,14 @@ void drawBullets(sf::RenderWindow& window, const std::vector<Bullet>& bullets)
 static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
 {
     window.clear();
+    window.setView(m_view);
     window.draw(player);
     window.draw(gun);
-    drawBullets(window, bullets);    
+    drawBullets(window, bullets);   
+    m_enemyManager.draw(window);
+    m_exitRenderer.draw(window, m_map);
+    m_respawnRenderer.draw(window, m_map);
+    m_renderer.draw(window);
     window.display();
 }
 
@@ -143,8 +164,7 @@ int main()
         std::cerr << "Failed to load image\n";
     }
     sf::Sprite player(playerTexture);
-    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
-    player.setScale(sf::Vector2f(20.f, 20.f));
+    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));    
     player.setPosition(sf::Vector2f(960.f, 540.f));
 
     sf::Texture gunTexture;
@@ -152,8 +172,7 @@ int main()
         std::cerr << "Failed to load image\n";        
     }
     sf::Sprite gun(gunTexture);
-    gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
-    gun.setScale(sf::Vector2f(15.f, 15.f));
+    gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));    
 
     sf::Texture bulletTexture;
     if (!bulletTexture.loadFromFile("images/bullet.png")) {
@@ -164,12 +183,21 @@ int main()
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
         std::cerr << "Failed to load image\n";
     }
-    Enemy enemy(enemyTexture, { 960.f, 540.f });
-    initEnemy(enemy, enemyTexture, { 960.f, 540.f });
+    //Enemy enemy(enemyTexture, { 960.f, 540.f });
+
+    
 
     sf::Clock clock;
     const float speedMultiplier = 300.f;
     const float gunDistance = 200.f;
+
+    float totalWidth = 100 * 32.0f;
+    float totalHeight = 100 * 32.0f;
+
+    m_view.setSize({ 1920, 1080 });
+    m_view.zoom(0.2f);
+    
+    m_map.reset();
 
     while (window.isOpen())
     {
@@ -179,22 +207,36 @@ int main()
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+            //if (const auto* k = event->getIf<sf::Event::KeyPressed>()) {
+
+            //    if (k->code == sf::Keyboard::Key::Space) {
+            //        m_map.reset();
+            //        /*m_enemyManager.spawnFromMap(m_map, TILE_SIZE);*/
+
+            //        /*for (auto& s : m_map.enemySpawns) {
+            //            m_enemies.push_back({ s.x, s.y });
+            //        }*/
+            //    }
+
+            //}
         }
 
         sf::Vector2f movement = getPlayerInput();
 
         if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
             shootClock.getElapsedTime().asSeconds() > shootDelay)
-        {
+        {            
             shoot(bullets, gun, player, window, bulletTexture);
             shootClock.restart();
         }
-        updateEnemy(enemy, dt);
-
-        updatePlayer(player, movement, dt, speedMultiplier);
+        //updateEnemy(enemy, dt);
+        
+        updatePlayer(player, movement, dt, speedMultiplier, m_view);
+        m_view.setCenter(player.getPosition());
         updateGun(gun, player, window, gunDistance);
         updateBullets(bullets, dt, window);
-        drawEnemy(enemy, window);
+        //drawEnemy(enemy, window);
         render(window, player, gun);
     }
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include "Enemy.hpp"
 #include "../map/Map.hpp"
+#include "Enemy.hpp"
 
 class EnemyManager {
 public:

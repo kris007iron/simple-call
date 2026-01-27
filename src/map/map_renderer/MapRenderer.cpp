@@ -5,7 +5,7 @@ MapRenderer::MapRenderer(const MapGenerator& m)
     tileset(),
     sprite(tileset)
 {
-    if (tileset.loadFromFile("C:\\Users\\User\\Desktop\\studia\\simple-call\\assets\\jan.png")) {
+    if (tileset.loadFromFile("images/jan.png")) {
         // Tekstura jest ju¿ powi¹zana, loadFromFile j¹ po prostu wype³ni danymi
     }
     initWallTiles();

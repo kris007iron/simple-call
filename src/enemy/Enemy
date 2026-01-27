@@ -4,7 +4,8 @@ struct Enemy {
     sf::Sprite sprite;
     float speed;
     bool alive;
-    Enemy(sf::Texture& texture, sf::Vector2f startPos) : sprite(texture)
+
+    Enemy(const sf::Texture& texture, sf::Vector2f startPos):sprite(texture)
     {
         sprite.setTexture(texture);
         sprite.setPosition(startPos);
@@ -12,6 +13,7 @@ struct Enemy {
         alive = true;
     }
 };
+
 
 bool initEnemy(Enemy& enemy, sf::Texture& texture, sf::Vector2f startPos);
 void updateEnemy(Enemy& enemy, float deltaTime);
