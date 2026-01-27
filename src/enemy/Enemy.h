@@ -1,0 +1,19 @@
+#include <SFML/Graphics.hpp>
+
+struct Enemy {
+    sf::Sprite sprite;
+    float speed;
+    bool alive;
+    Enemy(sf::Texture& texture, sf::Vector2f startPos) : sprite(texture)
+    {
+        sprite.setTexture(texture);
+        sprite.setPosition(startPos);
+        speed = 100.f;
+        alive = true;
+    }
+};
+
+bool initEnemy(Enemy& enemy, sf::Texture& texture, sf::Vector2f startPos);
+void updateEnemy(Enemy& enemy, float deltaTime);
+void drawEnemy(const Enemy& enemy, sf::RenderWindow& window);
+sf::FloatRect getEnemyBounds(const Enemy& enemy);

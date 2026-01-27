@@ -16,10 +16,20 @@ FetchContent_Declare(SFML
 )
 FetchContent_MakeAvailable(SFML)
 
-add_executable(main src/main.cpp "src/game/Game.cpp" "src/map/Map.cpp" "src/map/map_renderer/MapRenderer.cpp" "src/enemy/Enemy.cpp" "src/enemy/EnemyManager.cpp" "src/map/exit_renderer/ExitRenderer.cpp" "src/map/respawn_renderer/RespawnRenderer.cpp")
+
 
 target_link_libraries(main PRIVATE
     SFML::Graphics
     SFML::Window
     SFML::System
 )
+add_executable(main src/main.cpp "src/game/Game.cpp" "src/map/Map.cpp" "src/map/map_renderer/MapRenderer.cpp" "src/enemy/Enemy.cpp" "src/enemy/EnemyManager.cpp" "src/map/exit_renderer/ExitRenderer.cpp" "src/map/respawn_renderer/RespawnRenderer.cpp")
+add_custom_command(
+    TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/src/images
+            $<TARGET_FILE_DIR:main>/images
+)
+
+target_compile_features(main PRIVATE cxx_std_17)
+target_link_libraries(main PRIVATE SFML::Graphics)
