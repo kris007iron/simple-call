@@ -3,10 +3,10 @@
 
 class Enemy {
 public:
-    Enemy(int gridX, int gridY, float tileSize);
+    Enemy(int gridX, int gridY, float tileSize,const sf::Texture& texture);
 
     void draw(sf::RenderWindow& window) const;
 
-private:
-    sf::RectangleShape m_shape;
+private:    
+    sf::Sprite e_sprite;
 };

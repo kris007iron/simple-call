@@ -248,10 +248,10 @@ int main()
         std::cerr << "Failed to load image\n";
     }
 
-    sf::Texture enemyTexture;
+    /*sf::Texture enemyTexture;
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
         std::cerr << "Failed to load image\n";
-    }
+    }*/
     //Enemy enemy(enemyTexture, { 960.f, 540.f });
 
     
@@ -267,6 +267,7 @@ int main()
     //m_view.zoom(0.2f);
     
     m_map.reset();
+    m_enemyManager.spawnFromMap(m_map, 32.f);
     respawnPlayer(player, m_map, 32.f);
 
     while (window.isOpen())

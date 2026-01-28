@@ -12,4 +12,5 @@ public:
 
 private:
     std::vector<Enemy> m_enemies;
+    sf::Texture enemyTexture;
 };
