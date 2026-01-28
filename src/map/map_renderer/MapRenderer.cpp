@@ -14,7 +14,7 @@ MapRenderer::MapRenderer(const MapGenerator& m)
 void MapRenderer::initWallTiles() {
     sf::IntRect singleTile({ 0, 0 }, { 32, 32 });
 
-    // Ka¿dy rodzaj œciany u¿ywa tej samej grafiki 32x32
+ 
     for (int i = 0; i < 16; ++i) {
         wallTiles[i] = singleTile;
     }
@@ -27,15 +27,15 @@ void MapRenderer::draw(sf::RenderWindow& window) {
 
             if (t == FLOOR) {
                 // RYSOWANIE BIA£EJ POD£OGI
-                sprite.setTextureRect(sf::IntRect()); // Czyœcimy obszar tekstury (brak grafiki)
-                sprite.setColor(sf::Color::White);    // Ustawiamy kolor na bia³y
+                sprite.setTextureRect(sf::IntRect());
+                sprite.setColor(sf::Color::White);
             }
             else {
                 // RYSOWANIE ŒCIANY Z TEKSTURY 32x32
                 sprite.setColor(sf::Color::White);    // Upewniamy siê, ¿e kolor jest bia³y (¿eby nie barwi³ tekstury)
                 int mask = map.getWallMask(x, y);
 
-                // Poniewa¿ masz teksturê 32x32, zawsze u¿ywamy tego samego prostok¹ta
+
                 sprite.setTextureRect(sf::IntRect({ 0, 0 }, { 32, 32 }));
             }
 

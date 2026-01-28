@@ -28,9 +28,6 @@ struct Bullet
 struct EnemyBullet{};
 
 
-
-
-
 std::vector<Bullet> bullets;
 const float bulletSpeed = 1000.f;
 
@@ -48,6 +45,50 @@ EnemyManager m_enemyManager;
 ExitRenderer m_exitRenderer(32.f);
 RespawnRenderer m_respawnRenderer(32.f);
 
+sf::FloatRect getPlayerHitbox(const sf::Sprite& player)
+{
+    auto box = player.getGlobalBounds();
+
+    box.size *= 0.6f;
+    box.position += box.size * 0.2f;
+
+    return box;
+}
+
+bool checkWallCollision(const sf::FloatRect& box, const MapGenerator& map)
+{
+    int left = static_cast<int>(box.position.x) / 32;
+    int right = static_cast<int>(box.position.x + box.size.x) / 32;
+    int top = static_cast<int>(box.position.y) / 32;
+    int bottom = static_cast<int>(box.position.y + box.size.y) / 32;
+
+    for (int y = top; y <= bottom; y++)
+    {
+        for (int x = left; x <= right; x++)
+        {
+            if (x < 0 || y < 0 || x >= map.width || y >= map.height)
+                continue;
+
+            if (map.grid[y][x] == WALL)
+                return true;
+        }
+    }
+    return false;
+}
+
+void respawnPlayer(sf::Sprite& player, const MapGenerator& map, float tileSize)
+{
+    if (map.respawns.empty())
+        return;
+
+    const auto& spawn = map.respawns.front();
+
+    player.setPosition({
+        spawn.x * tileSize + tileSize / 2.f,
+        spawn.y * tileSize + tileSize / 2.f
+        });
+}
+
 sf::Vector2f getPlayerInput()
 {
     sf::Vector2f movement(0.f, 0.f);
@@ -64,11 +105,26 @@ sf::Vector2f getPlayerInput()
     return movement;
 }
 
-void updatePlayer(sf::Sprite& player, sf::Vector2f movement, float dt, float speed, sf::View view)
+void updatePlayer(
+    sf::Sprite& player,
+    sf::Vector2f movement,
+    float dt,
+    float speed,
+    const MapGenerator& map)
 {
-    /*view.move(movement * dt * speed);*/
-    player.move(movement * dt * speed);
+    sf::Vector2f delta = movement * speed * dt;
+
+    // X axis
+    player.move({ delta.x, 0.f });
+    if (checkWallCollision(getPlayerHitbox(player), map))
+        player.move({ -delta.x, 0.f });
+
+    // Y axis
+    player.move({ 0.f, delta.y });
+    if (checkWallCollision(getPlayerHitbox(player), map))
+        player.move({ 0.f, -delta.y });
 }
+
 
 void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, float gunDistance)
 {
@@ -108,29 +164,40 @@ void shoot(std::vector<Bullet>& bullets,
         dir * bulletSpeed
     );
     bullets.back().sprite.rotate(dir.angle());
-    std::cout << bullets[0].velocity.angle().asDegrees();
 }
 
-void updateBullets(std::vector<Bullet>& bullets,
-    float dt,
-    const sf::RenderWindow& window)
+bool bulletHitsWall(const Bullet& bullet, const MapGenerator& map)
 {
-    //TODO: deletion based on collision not based on window size 
-    const sf::Vector2u size = window.getSize();
+    sf::Vector2f pos = bullet.sprite.getPosition();
 
-    /*bullets.erase(
-        std::remove_if(bullets.begin(), bullets.end(),
-            [&](const Bullet& b)
-            {
-                sf::Vector2f p = b.sprite.getPosition();
-                return p.x < 0 || p.x > size.x ||
-                    p.y < 0 || p.y > size.y;
-            }),
-        bullets.end()
-    );*/
+    int tileX = static_cast<int>(pos.x) / 32;
+    int tileY = static_cast<int>(pos.y) / 32;
 
-    for (auto& b : bullets)
-        b.sprite.move(b.velocity * dt);
+    if (tileX < 0 || tileY < 0 ||
+        tileX >= map.width || tileY >= map.height)
+        return true; // poza map¹ = kasujemy
+
+    return map.grid[tileY][tileX] == WALL;
+}
+
+void updateBullets(
+    std::vector<Bullet>& bullets,
+    float dt,
+    const MapGenerator& map)
+{
+    for (size_t i = 0; i < bullets.size(); )
+    {
+        bullets[i].sprite.move(bullets[i].velocity * dt);
+
+        if (bulletHitsWall(bullets[i], map))
+        {
+            bullets.erase(bullets.begin() + i);
+        }
+        else
+        {
+            ++i;
+        }
+    }
 }
 
 
@@ -158,6 +225,8 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
 
 int main()
 {
+    std::srand(static_cast<unsigned>(std::time(nullptr))); //wa¿ne ¿eby losowe genrowanie dzia³a³o
+
     sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Simple call!");
     sf::Texture playerTexture;
     if (!playerTexture.loadFromFile("images/test-player.png")) {
@@ -189,15 +258,16 @@ int main()
 
     sf::Clock clock;
     const float speedMultiplier = 300.f;
-    const float gunDistance = 200.f;
+    const float gunDistance = 15.0f;
 
     float totalWidth = 100 * 32.0f;
     float totalHeight = 100 * 32.0f;
 
     m_view.setSize({ 1920, 1080 });
-    m_view.zoom(0.2f);
+    //m_view.zoom(0.2f);
     
     m_map.reset();
+    respawnPlayer(player, m_map, 32.f);
 
     while (window.isOpen())
     {
@@ -232,10 +302,10 @@ int main()
         }
         //updateEnemy(enemy, dt);
         
-        updatePlayer(player, movement, dt, speedMultiplier, m_view);
+        updatePlayer(player, movement, dt, speedMultiplier, m_map);
         m_view.setCenter(player.getPosition());
         updateGun(gun, player, window, gunDistance);
-        updateBullets(bullets, dt, window);
+        updateBullets(bullets, dt, m_map);
         //drawEnemy(enemy, window);
         render(window, player, gun);
     }
