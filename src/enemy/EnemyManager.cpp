@@ -7,9 +7,13 @@ void EnemyManager::spawnFromMap(const MapGenerator& map, float tileSize) {
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
         std::cerr << "Failed to load image\n";
     }
+    
+    if (!knifeTexture.loadFromFile("images/knife.png")) {
+        std::cerr << "Failed to load image\n";
+    }
 
     for (const auto& s : map.enemySpawns) {
-        m_enemies.emplace_back(s.x, s.y, tileSize, enemyTexture);
+        m_enemies.emplace_back(s.x, s.y, tileSize, enemyTexture, knifeTexture);
         //std::cout << "enemy drew";
     }
 }
@@ -17,10 +21,31 @@ void EnemyManager::spawnFromMap(const MapGenerator& map, float tileSize) {
 void EnemyManager::clear() {
     m_enemies.clear();
 }
-
-void EnemyManager::draw(sf::RenderWindow& window) const {
-    for (const auto& e : m_enemies) {
-        e.draw(window);
+const std::vector<Enemy> EnemyManager::getEnemies() const{
+    return m_enemies;
+}
+void EnemyManager::draw(sf::RenderWindow& window, const sf::Sprite& player) {
+    for (auto& e : m_enemies) {
+        e.draw(player, window);
         //std::cout << "enemy drew";
     }
 }
+
+std::vector<Enemy>& EnemyManager::getEnemies()
+{
+    return m_enemies;
+}
+
+
+void EnemyManager::update()
+{
+    m_enemies.erase(
+        std::remove_if(m_enemies.begin(), m_enemies.end(),
+            [](const Enemy& e)
+            {
+                return !e.isAlive();
+            }),
+        m_enemies.end()
+    );    
+}
+

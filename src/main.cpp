@@ -30,6 +30,7 @@ struct EnemyBullet{};
 
 std::vector<Bullet> bullets;
 const float bulletSpeed = 1000.f;
+int points = 0;
 
 std::vector<EnemyBullet> enemyBullets;
 
@@ -180,6 +181,30 @@ bool bulletHitsWall(const Bullet& bullet, const MapGenerator& map)
     return map.grid[tileY][tileX] == WALL;
 }
 
+bool bulletHitsEnemy(const Bullet& bullet, EnemyManager& enemyManager)
+{
+    sf::FloatRect bulletBounds = bullet.sprite.getGlobalBounds();
+
+    for (Enemy& enemy : enemyManager.getEnemies())
+    {
+        if (!enemy.isAlive())
+            continue;
+
+        sf::FloatRect enemyBounds = enemy.getEnemyBounds();
+
+        if (bulletBounds.findIntersection(enemyBounds))
+        {
+            points++;
+            enemy.kill();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
 void updateBullets(
     std::vector<Bullet>& bullets,
     float dt,
@@ -192,6 +217,11 @@ void updateBullets(
         if (bulletHitsWall(bullets[i], map))
         {
             bullets.erase(bullets.begin() + i);
+        }
+        else if (bulletHitsEnemy(bullets[i], m_enemyManager))
+        {
+            bullets.erase(bullets.begin() + i);
+            m_enemyManager.update();
         }
         else
         {
@@ -215,7 +245,7 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     window.draw(player);
     window.draw(gun);
     drawBullets(window, bullets);   
-    m_enemyManager.draw(window);
+    m_enemyManager.draw(window, player);
     m_exitRenderer.draw(window, m_map);
     m_respawnRenderer.draw(window, m_map);
     m_renderer.draw(window);

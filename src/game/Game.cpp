@@ -60,7 +60,7 @@ void Game::render() {
     m_window.setView(m_view);
 
     m_renderer.draw(m_window);
-    m_enemyManager.draw(m_window);
+    //m_enemyManager.draw(m_window);
     m_exitRenderer.draw(m_window, m_map);
     m_respawnRenderer.draw(m_window, m_map);
 
