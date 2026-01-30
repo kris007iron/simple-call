@@ -157,19 +157,214 @@ void MapGenerator::loadPresets() {
     "#########"
 } });
 
+    library.push_back({ 5, 5, {
+    ".....",
+    "..#..",
+    ".*.*.",
+    "..#..",
+    "....."
+} });
+    library.push_back({ 5, 5, {
+        ".#.#.",
+        "#...#",
+        "*...*",
+        "#...#",
+        ".#.#."
+    } });
+    library.push_back({ 5, 5, {
+        ".*.*.",
+        "..#..",
+        "..#..",
+        ".*.*.",
+        "....."
+    } });
+    library.push_back({ 5, 5, {
+        ".....",
+        ".***.",
+        ".*#*.",
+        ".***.",
+        "....."
+    } });
+
+    library.push_back({ 7, 7, {
+        "#######",
+        "#*...*#",
+        "#..#..#",
+        "#..*..#",
+        "#..#..#",
+        "#*...*#",
+        "#######"
+    } });
+    library.push_back({ 7, 7, {
+        "#..#..#",
+        ".#.*.#.",
+        "..*.*..",
+        ".#.*.#.",
+        "#..#..#",
+        ".......",
+        "#..*..#"
+    } });
+    library.push_back({ 7, 7, {
+        ".......",
+        "..###..",
+        ".*...*.",
+        ".#.*.#.",
+        ".*...*.",
+        "..###..",
+        "......."
+    } });
+    library.push_back({ 7, 7, {
+        "#*#*#*#",
+        ".......",
+        "..*.*..",
+        ".......",
+        "..*.*..",
+        ".......",
+        "#*#*#*#"
+    } });
+
+    library.push_back({ 9, 9, {
+        "#########",
+        "#*.....*#",
+        "#..###..#",
+        "#.*...*.#",
+        "#..###..#",
+        "#.*...*.#",
+        "#..###..#",
+        "#*.....*#",
+        "#########"
+    } });
+    library.push_back({ 9, 9, {
+        "#########",
+        "#..*.*..#",
+        "#.*.#.*.#",
+        "#.*.#.*.#",
+        "#..*.*..#",
+        "#.*.#.*.#",
+        "#.*.#.*.#",
+        "#..*.*..#",
+        "#########"
+    } });
+    library.push_back({ 9, 9, {
+        "#########",
+        "#..*.*..#",
+        "#..###..#",
+        "#.*...*.#",
+        "#..###..#",
+        "#.*...*.#",
+        "#..###..#",
+        "#..*.*..#",
+        "#########"
+    } });
+    library.push_back({ 9, 9, {
+        "#########",
+        "#*.*.*.*#",
+        "#.......#",
+        "#.*.*.*.#",
+        "#.......#",
+        "#.*.*.*.#",
+        "#.......#",
+        "#*.*.*.*#",
+        "#########"
+    } });
+
+    library.push_back({ 11, 7, {
+        "###########",
+        "#*..#..*..#",
+        "#.........#",
+        "#..###....#",
+        "#.........#",
+        "#*.......*#",
+        "###########"
+    } });
+    library.push_back({ 11, 7, {
+        "###########",
+        "#.*...*...#",
+        "#..###..#.#",
+        "#.........#",
+        "#..#..###.#",
+        "#*...*.*..#",
+        "###########"
+    } });
+    library.push_back({ 11, 7, {
+        "###########",
+        "#*.......*#",
+        "#..###....#",
+        "#.*...*...#",
+        "#....###..#",
+        "#*.......*#",
+        "###########"
+    } });
+    library.push_back({ 11, 7, {
+        "###########",
+        "#..*.*.*..#",
+        "#.........#",
+        "#.*.....*.#",
+        "#.........#",
+        "#..*.*.*..#",
+        "###########"
+    } });
+
+    library.push_back({ 13, 9, {
+        "#############",
+        "#*..#...*...#",
+        "#....###....#",
+        "#.*.......*.#",
+        "#....###....#",
+        "#.*.......*.#",
+        "#....###....#",
+        "#*...*...#..#",
+        "#############"
+    } });
+    library.push_back({ 13, 9, {
+        "#############",
+        "#.*.*.*.*.*.#",
+        "#...........#",
+        "#.*.*.*.*.*.#",
+        "#...........#",
+        "#.*.*.*.*.*.#",
+        "#...........#",
+        "#.*.*.*.*.*.#",
+        "#############"
+    } });
+    library.push_back({ 13, 9, {
+        "#############",
+        "#*...*...*...#",
+        "#..###..###..#",
+        "#.*.......*..#",
+        "#..###..###..#",
+        "#.*.......*..#",
+        "#..###..###..#",
+        "#*...*...*...#",
+        "#############"
+    } });
+    library.push_back({ 13, 9, {
+        "#############",
+        "#..*.*.*.*..#",
+        "#...........#",
+        "#.*.......*.#",
+        "#...........#",
+        "#.*.......*.#",
+        "#...........#",
+        "#..*.*.*.*..#",
+        "#############"
+    } });
+
 }
 
 void MapGenerator::generate(int x, int y, int w, int h, int depth) {
-    const int MIN_SIZE = 10;
+    const int MIN_SIZE = 6;
+    const int MAX_PREFABS_PER_ROOM = 2;
 
-    // stop ¿eby dzielenia przez zero nie by³o
     if (depth <= 0 || w < MIN_SIZE * 2 || h < MIN_SIZE * 2) {
-        createRoom(x, y, w, h);
+        int numPrefabs = 1 + rand() % MAX_PREFABS_PER_ROOM;
+        for (int i = 0; i < numPrefabs; ++i) {
+            createRoom(x, y, w, h);
+        }
         return;
     }
 
     bool splitH = (rand() % 2 == 0);
-    // Zachowanie proporcji (¿eby pokoje nie by³y zbyt w¹skie
     if (w > h && (float)w / h >= 1.25) splitH = false;
     else if (h > w && (float)h / w >= 1.25) splitH = true;
 
@@ -194,15 +389,17 @@ void MapGenerator::createRoom(int x, int y, int w, int h) {
     const auto& p = library[index];
 
     if (p.width <= w && p.height <= h) {
-        int rx = x + (w - p.width) / 2;
-        int ry = y + (h - p.height) / 2;
+        int rx = x + rand() % (w - p.width + 1);
+        int ry = y + rand() % (h - p.height + 1);
 
         for (int py = 0; py < p.height; ++py) {
             for (int px = 0; px < p.width; ++px) {
-
                 char c = p.layout[py][px];
                 int gx = ry + py;
                 int gy = rx + px;
+
+                if (gx < 0 || gx >= height || gy < 0 || gy >= width)
+                    continue;
 
                 switch (c) {
                 case '.':
@@ -215,16 +412,6 @@ void MapGenerator::createRoom(int x, int y, int w, int h) {
                     grid[gx][gy] = FLOOR;
                     enemySpawns.push_back({ gy, gx, "enemy" });
                     break;
-                case 'E':
-                    if (!exitPlaced) {
-                        grid[gx][gy] = FLOOR;
-                        exits.push_back({ gy, gx });
-                        exitPlaced = true;
-                    }
-                    else {
-                        grid[gx][gy] = FLOOR;
-                    }
-                    break;
                 default:
                     grid[gx][gy] = WALL;
                     break;
@@ -235,7 +422,6 @@ void MapGenerator::createRoom(int x, int y, int w, int h) {
         rooms.push_back({ rx, ry, p.width, p.height });
     }
 }
-
 
 void MapGenerator::connectRooms(Room a, Room b) {
     int sx = a.x + a.w / 2, sy = a.y + a.h / 2;
@@ -261,7 +447,6 @@ void MapGenerator::drawVLine(int y1, int y2, int x) {
         if (y >= 0 && y < height && x >= 0 && x < width) grid[y][x] = FLOOR;
 }
 
-// DODAJ 'const' TUTAJ:
 int MapGenerator::getWallMask(int x, int y) const {
     if (grid[y][x] == FLOOR) return -1;
     int m = 0;
@@ -286,25 +471,28 @@ void MapGenerator::reset() {
     for (size_t i = 0; i < rooms.size() - 1; ++i)
         connectRooms(rooms[i], rooms[i + 1]);
 
-    // Exit
-    if (!exitPlaced && !rooms.empty()) {
-        const Room& r = rooms.back();
-        int ex = r.x + r.w / 2;
-        int ey = r.y + r.h / 2;
+    if (!rooms.empty()) {
+        int startRoomIndex = rand() % rooms.size();
+        const Room& startRoom = rooms[startRoomIndex];
+        int spawnX = startRoom.x + startRoom.w / 2;
+        int spawnY = startRoom.y + startRoom.h / 2;
+        respawns.push_back({ spawnX, spawnY });
+        spawnPlaced = true;
+
+        int exitRoomIndex;
+        do {
+            exitRoomIndex = rand() % rooms.size();
+        } while (exitRoomIndex == startRoomIndex);
+
+        const Room& exitRoom = rooms[exitRoomIndex];
+        int ex = exitRoom.x + exitRoom.w / 2;
+        int ey = exitRoom.y + exitRoom.h / 2;
         exits.push_back({ ex, ey });
         grid[ey][ex] = FLOOR;
         exitPlaced = true;
     }
-
-    // Respawn tylko w pierwszym pokoju
-    if (!rooms.empty()) {
-        const Room& firstRoom = rooms[0];
-        int spawnX = firstRoom.x + firstRoom.w / 2;
-        int spawnY = firstRoom.y + firstRoom.h / 2;
-        respawns.push_back({ spawnX, spawnY });
-        spawnPlaced = true;
-    }
 }
+
 
 
 

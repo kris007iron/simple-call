@@ -151,6 +151,26 @@ bool checkWallCollision(const sf::FloatRect& box, const MapGenerator& map)
     return false;
 }
 
+bool playerTouchesExit(const sf::Sprite& player, const MapGenerator& map)
+{
+    sf::FloatRect playerBox = getPlayerHitbox(player);
+
+    for (const auto& exit : map.exits)
+    {
+        sf::FloatRect exitBox(
+            sf::Vector2f(exit.x * 32.f, exit.y * 32.f),
+            sf::Vector2f(32.f, 32.f)
+        );
+
+
+        if (playerBox.findIntersection(exitBox))
+            return true;
+    }
+
+    return false;
+}
+
+
 void respawnPlayer(sf::Sprite& player, const MapGenerator& map, float tileSize)
 {
     if (map.respawns.empty())
@@ -162,6 +182,18 @@ void respawnPlayer(sf::Sprite& player, const MapGenerator& map, float tileSize)
         spawn.x * tileSize + tileSize / 2.f,
         spawn.y * tileSize + tileSize / 2.f
         });
+}
+
+void nextLevel()
+{
+    bullets.clear();
+
+    m_map.reset();
+    m_enemyManager.clear();
+    m_enemyManager.spawnFromMap(m_map, 32);
+
+    respawnPlayer(player, m_map, 32);
+    m_view.setCenter(player.getPosition());
 }
 
 sf::Vector2f getPlayerInput()
@@ -250,7 +282,7 @@ bool bulletHitsWall(const Bullet& bullet, const MapGenerator& map)
 
     if (tileX < 0 || tileY < 0 ||
         tileX >= map.width || tileY >= map.height)
-        return true; // poza map¹ = kasujemy
+        return true; // poza mape = kasujemy
 
     return map.grid[tileY][tileX] == WALL;
 }
@@ -536,6 +568,16 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
         shoot(bullets, gun, player, window, bulletTexture);
         shootClock.restart();
     }
+
+    static bool levelChanging = false;
+
+    if (!levelChanging && playerTouchesExit(player, m_map))
+    {
+        levelChanging = true;
+        nextLevel();
+        levelChanging = false;
+    }
+
     scoreText.setString("Score: " + std::to_string(points));
 }
 
