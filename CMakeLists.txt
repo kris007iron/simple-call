@@ -15,8 +15,28 @@ FetchContent_Declare(SFML
     SYSTEM
 )
 FetchContent_MakeAvailable(SFML)
+add_executable(main
+    src/main.cpp
+    src/game/Game.cpp
+    src/map/Map.cpp
+    src/map/map_renderer/MapRenderer.cpp
+    src/enemy/Enemy.cpp
+    src/enemy/EnemyManager.cpp
+    src/map/exit_renderer/ExitRenderer.cpp
+    src/map/respawn_renderer/RespawnRenderer.cpp
+)
 
-add_executable(main src/main.cpp "src/game/Game.cpp" "src/map/Map.cpp" "src/map/map_renderer/MapRenderer.cpp" "src/enemy/Enemy.cpp" "src/enemy/EnemyManager.cpp" "src/map/exit_renderer/ExitRenderer.cpp" "src/map/respawn_renderer/RespawnRenderer.cpp")
+target_compile_features(main PRIVATE cxx_std_20)
+
+target_link_libraries(main PRIVATE
+    SFML::Graphics
+    SFML::Audio
+)
+
+set_target_properties(main PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
 add_custom_command(
     TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -24,5 +44,9 @@ add_custom_command(
             $<TARGET_FILE_DIR:main>/images
 )
 
-target_compile_features(main PRIVATE cxx_std_17)
-target_link_libraries(main PRIVATE SFML::Graphics)
+add_custom_command(
+    TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/src/Resources
+            $<TARGET_FILE_DIR:main>/Resources
+)
