@@ -112,12 +112,19 @@ EnemyManager m_enemyManager;
 ExitRenderer m_exitRenderer(32.f);
 RespawnRenderer m_respawnRenderer(32.f);
 
+sf::Texture playerTexture;
+sf::Texture gunTexture;
+sf::Texture bulletTexture;
+sf::Sprite gun{ gunTexture };
+sf::Sprite player{ playerTexture };
+sf::CircleShape debugCircle(20.f);
+
 sf::FloatRect getPlayerHitbox(const sf::Sprite& player)
 {
     auto box = player.getGlobalBounds();
 
     box.size *= 0.6f;
-    box.position += box.size * 0.2f;
+    box.position += box.size * 0.2f;    
 
     return box;
 }
@@ -302,15 +309,20 @@ void drawBullets(sf::RenderWindow& window, const std::vector<Bullet>& bullets)
 
 static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
 {
+
+    
+    
+    debugCircle.setPosition(player.getPosition());
     window.clear();
+    //window.draw(debugCircle);
     window.setView(m_view);
-    window.draw(player);
-    window.draw(gun);
+    m_renderer.draw(window);
     drawBullets(window, bullets);
     m_enemyManager.draw(window, player);
     m_exitRenderer.draw(window, m_map);
     m_respawnRenderer.draw(window, m_map);
-    m_renderer.draw(window);
+    window.draw(player);
+    window.draw(gun);
     window.display();
 }
 
@@ -428,6 +440,7 @@ void menuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
             if (play_button.getGlobalBounds().contains(mousePos))
+                //window.clear();
                 currentState = GameStateID::GAMEPLAY;
 
             if (settings_button.getGlobalBounds().contains(mousePos)) {
@@ -502,12 +515,26 @@ void gameHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
     }
 }
 
-void gameUpdate(sf::Time, sf::RenderWindow& window) {}
+void gameUpdate(sf::Time time, sf::RenderWindow& window) {
+    const float speedMultiplier = 300.f;
+    const float gunDistance = 15.0f;
+    sf::Vector2f movement = getPlayerInput();
+    float dt = time.asSeconds();
+    updatePlayer(player, movement, dt, speedMultiplier, m_map);
+    m_view.setCenter(player.getPosition());
+    updateGun(gun, player, window, gunDistance);
+    updateBullets(bullets, dt, m_map);
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
+        shootClock.getElapsedTime().asSeconds() > shootDelay)
+    {
+        shoot(bullets, gun, player, window, bulletTexture);
+        shootClock.restart();
+    }
+}
 
 void gameDraw(sf::RenderWindow& window) {
-
-    window.clear(sf::Color::Black);
-    window.display();
+    
+    render(window, player, gun);    
 }
 
 void settingsHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
@@ -742,8 +769,7 @@ int main()
     centerOrigin(pause, pause_texture);
     centerOrigin(leaderboardText, leaderboard_texture);
 
-    sf::RenderWindow window(sf::VideoMode({ screen_height, screen_width }), "Simple call!");
-    sf::Texture playerTexture;
+    sf::RenderWindow window(sf::VideoMode({ screen_width, screen_height }), "Simple call!");
 
     window.setFramerateLimit(60);
     int move_buttons = 2 * settings_texture.getSize().y;
@@ -756,52 +782,48 @@ int main()
     music_button.setPosition({ screen_width / 2.f - music_texture.getSize().x * 1.1f, screen_height / 2.f - music_texture.getSize().y });
     sfx_button.setPosition({ screen_width / 2.f - music_texture.getSize().x * 1.1f, screen_height / 2.f + sfx_texture.getSize().y });
     back.setPosition({ screen_width / 2.f, screen_height - back_texture.getSize().y * 1.6f });
+    
     if (!playerTexture.loadFromFile("images/test-player.png")) {
         std::cerr << "Failed to load image\n";
-    }
-    sf::Sprite player(playerTexture);
-    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
-    player.setPosition(sf::Vector2f(960.f, 540.f));
-
-    sf::Texture gunTexture;
+    }    
     if (!gunTexture.loadFromFile("images/gun.png")) {
         std::cerr << "Failed to load image\n";
-    }
-    sf::Sprite gun(gunTexture);
-    gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
+    }    
 
-    sf::Texture bulletTexture;
     if (!bulletTexture.loadFromFile("images/bullet.png")) {
         std::cerr << "Failed to load image\n";
     }
-
+    
     /*sf::Texture enemyTexture;
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
         std::cerr << "Failed to load image\n";
     }*/
     //Enemy enemy(enemyTexture, { 960.f, 540.f });
 
-
-
-    sf::Clock clock;
-    const float speedMultiplier = 300.f;
-    const float gunDistance = 15.0f;
+    sf::Clock clock;    
 
     float totalWidth = 100 * 32.0f;
     float totalHeight = 100 * 32.0f;
 
     m_view.setSize({ 1920, 1080 });
-    //m_view.zoom(0.2f);
+    m_view.zoom(.2f);
 
     m_map.reset();
     m_enemyManager.spawnFromMap(m_map, 32.f);
+    player = sf::Sprite(playerTexture);
+    gun = sf::Sprite(gunTexture);
+    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
+    gun.setOrigin({24, 9});
+    //gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
     respawnPlayer(player, m_map, 32.f);
+
+    debugCircle.setFillColor(sf::Color::Red);
+    debugCircle.setOrigin({ 20.f, 20.f });
 
     resume.setPosition(play_button.getPosition());
     pause.setPosition(volume.getPosition());
 
-    leaderboardText.setPosition(pause.getPosition());
-
+    leaderboardText.setPosition(pause.getPosition());    
     //petla programu
     currentState = GameStateID::MENU;    
 
@@ -833,21 +855,6 @@ int main()
             //}
         }
         states[(int)currentState].update(dtTime, window);
-        states[(int)currentState].draw(window);
-        sf::Vector2f movement = getPlayerInput();
-
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
-            shootClock.getElapsedTime().asSeconds() > shootDelay)
-        {
-            shoot(bullets, gun, player, window, bulletTexture);
-            shootClock.restart();
-        }        
-
-        updatePlayer(player, movement, dt, speedMultiplier, m_map);
-        m_view.setCenter(player.getPosition());
-        updateGun(gun, player, window, gunDistance);
-        updateBullets(bullets, dt, m_map);        
-        render(window, player, gun);
-
+        states[(int)currentState].draw(window);                                   
     }
 }

@@ -30,11 +30,11 @@ void Enemy::updateKnife(const sf::Sprite & player)
     e_knife.setRotation(playerToMouse.angle());
     if (e_knife.getRotation().asDegrees() > 90.0f && e_knife.getRotation().asDegrees() < 270.0f) {
         e_knife.setScale(sf::Vector2f(1.f, -1.f));
-        e_sprite.setScale(sf::Vector2f(-1.f, 1.f));
+        //e_sprite.setScale(sf::Vector2f(-1.f, 1.f));
     }
     else {
         e_knife.setScale(sf::Vector2f(1.f, 1.f));
-        e_sprite.setScale(sf::Vector2f(1.f, 1.f));
+        //e_sprite.setScale(sf::Vector2f(1.f, 1.f));
     }
     e_knife.setPosition(e_sprite.getPosition() + playerToMouse.normalized() * knifeDistance);
 }
