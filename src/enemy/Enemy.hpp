@@ -7,7 +7,7 @@ public:
     Enemy(int gridX, int gridY, float tileSize, const sf::Texture& texture, const sf::Texture& knife_texture);
 
     void updateKnife(const sf::Sprite& player);
-    void updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& map);
+    int updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& map);
     void draw(const sf::Sprite& player, sf::RenderWindow& window);
     sf::FloatRect getEnemyBounds() const;
     void kill() {

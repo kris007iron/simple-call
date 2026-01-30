@@ -61,6 +61,7 @@ std::vector<Bullet> bullets;
 const float bulletSpeed = 1000.f;
 int points = 0;
 
+
 const unsigned int screen_width = 1920;
 const unsigned int screen_height = 1080;
 
@@ -118,7 +119,8 @@ sf::Texture bulletTexture;
 sf::Sprite gun{ gunTexture };
 sf::Sprite player{ playerTexture };
 sf::CircleShape debugCircle(20.f);
-sf::Text scoreText(font,"", 40);
+sf::Text scoreText(font, "", 40);
+sf::Text healthText(font,"", 40);
 
 sf::FloatRect getPlayerHitbox(const sf::Sprite& player)
 {
@@ -358,6 +360,7 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
 
     window.setView(window.getDefaultView());
     window.draw(scoreText);
+    window.draw(healthText);
 
     window.display();
 }
@@ -579,6 +582,7 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
     }
 
     scoreText.setString("Score: " + std::to_string(points));
+    healthText.setString("Health: " + std::to_string(m_enemyManager.getHealth()));
 }
 
 void gameDraw(sf::RenderWindow& window) {
@@ -827,6 +831,14 @@ int main()
     scoreText.setOutlineThickness(2.f);
     // Position it in the top-left corner of the screen
     scoreText.setPosition({ 20.f, 20.f });
+    
+    healthText.setFont(font);
+    healthText.setCharacterSize(30);
+    healthText.setFillColor(sf::Color::White);
+    healthText.setOutlineColor(sf::Color::Black);
+    healthText.setOutlineThickness(2.f);
+    // Position it in the top-left corner of the screen
+    healthText.setPosition({ 1920.f -160.f, 20.f });
 
     window.setFramerateLimit(60);
     int move_buttons = 2 * settings_texture.getSize().y;

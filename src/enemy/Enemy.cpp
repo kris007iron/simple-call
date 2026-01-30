@@ -22,15 +22,15 @@ void Enemy::draw(const sf::Sprite& player, sf::RenderWindow& window) {
     window.draw(e_knife);
 }
 
-void Enemy::updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& map)
+int Enemy::updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& map)
 {
     sf::Vector2f toPlayer = player.getPosition() - e_sprite.getPosition();
     float distance = toPlayer.length();
 
     if (distance < 40.f)
     {
-        // ATTACK RANGE        
-        // here you would trigger attack logic
+        kill();
+        return 1;
     }
     else if (distance < 100.f)
     {
@@ -41,7 +41,9 @@ void Enemy::updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& 
         
 
         e_sprite.move(dir * speed * dt);
+        return 0;
     }
+    return 0;
 }
 
 

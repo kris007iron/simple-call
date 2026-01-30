@@ -48,7 +48,7 @@ void EnemyManager::update(float dt, const MapGenerator& map, const sf::Sprite& p
         m_enemies.end()
     );    
     for (auto& e : m_enemies) {
-        e.updateEnemy(player, dt, map);        
+        setHealth(getHealth() - e.updateEnemy(player, dt, map));
     }
 }
 

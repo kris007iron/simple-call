@@ -11,8 +11,15 @@ public:
     std::vector<Enemy>& getEnemies();
     const std::vector<Enemy> getEnemies() const;
     void update(float dt, const MapGenerator& map, const sf::Sprite& player);
+    void setHealth(int n_health) {
+        health = n_health;
+    };
+    int getHealth() const {
+        return health;
+    };
 private:
     std::vector<Enemy> m_enemies;
     sf::Texture enemyTexture;
     sf::Texture knifeTexture;
+    int health = 20;
 };
