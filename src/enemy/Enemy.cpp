@@ -1,4 +1,6 @@
 #include "Enemy.hpp"
+#include <iostream>
+#include "../map/Map.hpp"
 
 Enemy::Enemy(int gridX, int gridY, float tileSize, const sf::Texture& texture, const sf::Texture& knife_texture)
     : e_sprite(texture), e_knife(knife_texture)
@@ -14,11 +16,34 @@ Enemy::Enemy(int gridX, int gridY, float tileSize, const sf::Texture& texture, c
 
 }
 
-void Enemy::draw(const sf::Sprite& player, sf::RenderWindow& window) {
+void Enemy::draw(const sf::Sprite& player, sf::RenderWindow& window) {    
     updateKnife(player);
     window.draw(e_sprite);
     window.draw(e_knife);
 }
+
+void Enemy::updateEnemy(const sf::Sprite& player, float dt, const MapGenerator& map)
+{
+    sf::Vector2f toPlayer = player.getPosition() - e_sprite.getPosition();
+    float distance = toPlayer.length();
+
+    if (distance < 40.f)
+    {
+        // ATTACK RANGE        
+        // here you would trigger attack logic
+    }
+    else if (distance < 100.f)
+    {
+        // CHASE RANGE
+        std::cout << "pursue\n";
+
+        sf::Vector2f dir = toPlayer.normalized();
+        
+
+        e_sprite.move(dir * speed * dt);
+    }
+}
+
 
 void Enemy::updateKnife(const sf::Sprite & player)
 {

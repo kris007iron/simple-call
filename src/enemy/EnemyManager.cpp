@@ -26,8 +26,7 @@ const std::vector<Enemy> EnemyManager::getEnemies() const{
 }
 void EnemyManager::draw(sf::RenderWindow& window, const sf::Sprite& player) {
     for (auto& e : m_enemies) {
-        e.draw(player, window);
-        //std::cout << "enemy drew";
+        e.draw(player, window);        
     }
 }
 
@@ -37,8 +36,9 @@ std::vector<Enemy>& EnemyManager::getEnemies()
 }
 
 
-void EnemyManager::update()
+void EnemyManager::update(float dt, const MapGenerator& map, const sf::Sprite& player)
 {
+
     m_enemies.erase(
         std::remove_if(m_enemies.begin(), m_enemies.end(),
             [](const Enemy& e)
@@ -47,5 +47,8 @@ void EnemyManager::update()
             }),
         m_enemies.end()
     );    
+    for (auto& e : m_enemies) {
+        e.updateEnemy(player, dt, map);        
+    }
 }
 
