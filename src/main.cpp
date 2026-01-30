@@ -118,6 +118,7 @@ sf::Texture bulletTexture;
 sf::Sprite gun{ gunTexture };
 sf::Sprite player{ playerTexture };
 sf::CircleShape debugCircle(20.f);
+sf::Text scoreText(font,"", 40);
 
 sf::FloatRect getPlayerHitbox(const sf::Sprite& player)
 {
@@ -323,8 +324,7 @@ void updateBullets(
         }
         else if (bulletHitsEnemy(bullets[i], m_enemyManager))
         {
-            bullets.erase(bullets.begin() + i);
-            m_enemyManager.update();
+            bullets.erase(bullets.begin() + i);            
         }
         else
         {
@@ -355,6 +355,10 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     m_respawnRenderer.draw(window, m_map);
     window.draw(player);
     window.draw(gun);
+
+    window.setView(window.getDefaultView());
+    window.draw(scoreText);
+
     window.display();
 }
 
@@ -548,6 +552,7 @@ void gameHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 }
 
 void gameUpdate(sf::Time time, sf::RenderWindow& window) {
+    window.setView(m_view);
     const float speedMultiplier = 300.f;
     const float gunDistance = 15.0f;
     sf::Vector2f movement = getPlayerInput();
@@ -556,6 +561,7 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
     m_view.setCenter(player.getPosition());
     updateGun(gun, player, window, gunDistance);
     updateBullets(bullets, dt, m_map);
+    m_enemyManager.update(dt, m_map, player);
     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
         shootClock.getElapsedTime().asSeconds() > shootDelay)
     {
@@ -572,6 +578,7 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
         levelChanging = false;
     }
 
+    scoreText.setString("Score: " + std::to_string(points));
 }
 
 void gameDraw(sf::RenderWindow& window) {
@@ -813,6 +820,14 @@ int main()
 
     sf::RenderWindow window(sf::VideoMode({ screen_width, screen_height }), "Simple call!");
 
+    scoreText.setFont(font);
+    scoreText.setCharacterSize(30);
+    scoreText.setFillColor(sf::Color::White);
+    scoreText.setOutlineColor(sf::Color::Black);
+    scoreText.setOutlineThickness(2.f);
+    // Position it in the top-left corner of the screen
+    scoreText.setPosition({ 20.f, 20.f });
+
     window.setFramerateLimit(60);
     int move_buttons = 2 * settings_texture.getSize().y;
 
@@ -855,7 +870,8 @@ int main()
     player = sf::Sprite(playerTexture);
     gun = sf::Sprite(gunTexture);
     player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
-    gun.setOrigin({24, 9});
+    gun.setOrigin({24, 9 });
+    gun.setScale({ 0.6f, .6f });
     //gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
     respawnPlayer(player, m_map, 32.f);
 

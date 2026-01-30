@@ -6,12 +6,11 @@
 class EnemyManager {
 public:
     void spawnFromMap(const MapGenerator& map, float tileSize);
-    void clear();
-
+    void clear();    
     void draw(sf::RenderWindow& window, const sf::Sprite& player);
     std::vector<Enemy>& getEnemies();
     const std::vector<Enemy> getEnemies() const;
-    void update();
+    void update(float dt, const MapGenerator& map, const sf::Sprite& player);
 private:
     std::vector<Enemy> m_enemies;
     sf::Texture enemyTexture;
