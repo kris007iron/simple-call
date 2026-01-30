@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>
+#include <fstream>
 
 enum class GameStateID {
     MENU,
@@ -25,6 +26,14 @@ struct Slider {
     bool dragging;
 };
 
+struct ScoreEntry {
+    std::string playerName;
+    int score;
+};
+
+const unsigned int screen_width = 1920;
+const unsigned int screen_height = 1080;
+
 sf::RenderWindow window;
 
 GameStateID currentState;
@@ -40,6 +49,7 @@ sf::Texture music_texture;
 sf::Texture sfx_texture;
 sf::Texture resume_texture;
 sf::Texture pause_texture;
+sf::Texture leaderboard_texture;
 
 sf::Sprite play_button{ play_texture };
 sf::Sprite settings_button{ settings_texture };
@@ -51,13 +61,61 @@ sf::Sprite music_button{ music_texture };
 sf::Sprite sfx_button{ sfx_texture };
 sf::Sprite resume{ resume_texture };
 sf::Sprite pause{ pause_texture };
+sf::Sprite leaderboardText{ leaderboard_texture };
 
 sf::Shader darkenShader;
 sf::Shader redFilterShader;
 
 sf::Music music;
 
+sf::Font font;
+std::vector<ScoreEntry> leaderboardScores;
+
 Slider volumeSlider;
+
+bool compareScores(const ScoreEntry& a, const ScoreEntry& b) {
+    return a.score > b.score;
+}
+
+void saveScoreToFile(std::string& name, int score) {
+    std::fstream file("Resources/leaderboard.txt", std::ios::app);
+
+    if (file.is_open()) {
+        file << name << " " << score << "\n";
+        file.close();
+    }
+    else {
+        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
+    }
+}
+
+std::vector<ScoreEntry> loadLeaderboard() {
+
+    std::vector<ScoreEntry> scores;
+    std::ifstream file("Resources/leaderboard.txt");
+
+    if(!file.is_open()) {
+        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
+        return scores;
+    }
+
+    std::string name;
+    int score;
+
+    while (file >> name >> score) {
+
+        ScoreEntry entry;
+        entry.playerName = name;
+        entry.score = score;
+        scores.push_back(entry);
+    }
+
+    file.close();
+
+    std::sort(scores.begin(), scores.end(), compareScores);
+
+    return scores;
+}
 
 void initVolumeSlider(float x, float y, float width) {
 
@@ -78,25 +136,25 @@ void initVolumeSlider(float x, float y, float width) {
 
 void handleSliderEvent(const sf::Event& event) {
 
-    if (event.is<sf::Event::MouseButtonPressed>()) {
+    if(event.is<sf::Event::MouseButtonPressed>()) {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
 
-        if (mouse->button == sf::Mouse::Button::Left) {
+        if(mouse->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-            if (volumeSlider.knob.getGlobalBounds().contains(mousePos))
+            if(volumeSlider.knob.getGlobalBounds().contains(mousePos))
                 volumeSlider.dragging = true;
         }
     }
 
-    if (event.is<sf::Event::MouseButtonReleased>()) {
+    if(event.is<sf::Event::MouseButtonReleased>()) {
         auto mouse = event.getIf<sf::Event::MouseButtonReleased>();
 
         if (mouse->button == sf::Mouse::Button::Left)
             volumeSlider.dragging = false;
     }
 
-    if (event.is<sf::Event::MouseMoved>() && volumeSlider.dragging) {
+    if(event.is<sf::Event::MouseMoved>() && volumeSlider.dragging) {
         float mouseX = window.mapPixelToCoords(sf::Mouse::getPosition(window)).x;
 
         if (mouseX < volumeSlider.minX) mouseX = volumeSlider.minX;
@@ -119,24 +177,24 @@ void centerOrigin(sf::Sprite &sprite, sf::Texture &texture) {
 
 void menuHandleEvent(const sf::Event& event) {
 
-    if (event.is<sf::Event::Closed>())
+    if(event.is<sf::Event::Closed>())
         window.close();
 
-    if (event.is<sf::Event::MouseButtonPressed>()) {
+    if(event.is<sf::Event::MouseButtonPressed>()) {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
 
-        if (mouse->button == sf::Mouse::Button::Left) {
+        if(mouse->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-            if (play_button.getGlobalBounds().contains(mousePos))
+            if(play_button.getGlobalBounds().contains(mousePos))
                 currentState = GameStateID::GAMEPLAY;
 
-            if (settings_button.getGlobalBounds().contains(mousePos)) {
+            if(settings_button.getGlobalBounds().contains(mousePos)) {
                 previousState = currentState;
                 currentState = GameStateID::SETTINGS;
             }
 
-            if (leave_button.getGlobalBounds().contains(mousePos))
+            if(leave_button.getGlobalBounds().contains(mousePos))
                 window.close();
         }
     }
@@ -185,15 +243,20 @@ void menuDraw() {
 
 void gameHandleEvent(const sf::Event& event) {
 
-    if (event.is<sf::Event::Closed>())
+    if(event.is<sf::Event::Closed>())
         window.close();
 
-    if (event.is<sf::Event::KeyPressed>()) {
+    if(event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if (key->scancode == sf::Keyboard::Scan::Escape) {
+        if(key->scancode == sf::Keyboard::Scan::Escape) {
             music.pause();
             currentState = GameStateID::PAUSE_MENU;
+        }
+
+        if (key->scancode == sf::Keyboard::Scan::Backspace) {
+            leaderboardScores = loadLeaderboard();
+            currentState = GameStateID::END_GAME;
         }
     }
 }
@@ -208,28 +271,28 @@ void gameDraw() {
 
 void settingsHandleEvent(const sf::Event& event) {
 
-    if (event.is<sf::Event::Closed>())
+    if(event.is<sf::Event::Closed>())
         window.close();
 
-    if (event.is<sf::Event::MouseButtonPressed>()) {
+    if(event.is<sf::Event::MouseButtonPressed>()) {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
 
-        if (mouse->button == sf::Mouse::Button::Left) {
+        if(mouse->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-            if (mouse->button == sf::Mouse::Button::Left) {
+            if(mouse->button == sf::Mouse::Button::Left) {
                 sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-                if (back.getGlobalBounds().contains(mousePos))
+                if(back.getGlobalBounds().contains(mousePos))
                     currentState = previousState;
             }
         }
     }
 
-    if (event.is<sf::Event::KeyPressed>()) {
+    if(event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if (key->scancode == sf::Keyboard::Scan::Escape)
+        if(key->scancode == sf::Keyboard::Scan::Escape)
             currentState = previousState;
     }
 
@@ -240,7 +303,7 @@ void settingsUpdate(sf::Time) {
 
     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-    if (back.getGlobalBounds().contains(mousePos))
+    if(back.getGlobalBounds().contains(mousePos))
         back.setScale({ 1.1f,1.1f });
     else
         back.setScale({ 1.f,1.f });
@@ -262,36 +325,36 @@ void settingsDraw() {
 
 void pauseMenuHandleEvent(const sf::Event& event) {
 
-    if (event.is<sf::Event::Closed>())
+    if(event.is<sf::Event::Closed>())
         window.close();
 
-    if (event.is<sf::Event::MouseButtonPressed>()) {
+    if(event.is<sf::Event::MouseButtonPressed>()) {
         auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
 
-        if (mouse->button == sf::Mouse::Button::Left) {
+        if(mouse->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-            if (resume.getGlobalBounds().contains(mousePos)) {
+            if(resume.getGlobalBounds().contains(mousePos)) {
                 music.play();
                 currentState = GameStateID::GAMEPLAY;
             }
 
-            if (settings_button.getGlobalBounds().contains(mousePos)) {
+            if(settings_button.getGlobalBounds().contains(mousePos)) {
                 previousState = currentState;
                 currentState = GameStateID::SETTINGS;
             }
 
-            if (leave_button.getGlobalBounds().contains(mousePos)) {
+            if(leave_button.getGlobalBounds().contains(mousePos)) {
                 music.play();
                 currentState = GameStateID::MENU;
             }
         }
     }
 
-    if (event.is<sf::Event::KeyPressed>()) {
+    if(event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if (key->scancode == sf::Keyboard::Scan::Escape)
+        if(key->scancode == sf::Keyboard::Scan::Escape)
             music.play();
             currentState = GameStateID::GAMEPLAY;
     }
@@ -302,16 +365,16 @@ void pauseMenuUpdate(sf::Time) {
 
     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-    if (resume.getGlobalBounds().contains(mousePos))
+    if(resume.getGlobalBounds().contains(mousePos))
         resume.setScale({ 1.1f,1.1f });
     else resume.setScale({ 1.f,1.f });
 
-    if (settings_button.getGlobalBounds().contains(mousePos))
+    if(settings_button.getGlobalBounds().contains(mousePos))
         settings_button.setScale({ 1.1f,1.1f });
     else
         settings_button.setScale({ 1.f,1.f });
 
-    if (leave_button.getGlobalBounds().contains(mousePos))
+    if(leave_button.getGlobalBounds().contains(mousePos))
         leave_button.setScale({ 1.1f,1.1f });
     else
         leave_button.setScale({ 1.f,1.f });
@@ -331,26 +394,16 @@ void pauseMenuDraw() {
 
 void endMenuHandleEvent(const sf::Event& event) {
 
-    /*if (event.is<sf::Event::Closed>())
+    if (event.is<sf::Event::Closed>())
         window.close();
-
-    if (event.is<sf::Event::MouseButtonPressed>()) {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-
-        if (mouse->button == sf::Mouse::Button::Left) {
-            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-            if (settings_button.getGlobalBounds().contains(mousePos))
-                currentState = GameStateID::SETTINGS;
-        }
-    }
 
     if (event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if (key->scancode == sf::Keyboard::Scan::Escape)
+        if (key->scancode == sf::Keyboard::Scan::Escape || key->scancode == sf::Keyboard::Scan::Enter) {
             currentState = GameStateID::MENU;
-    }*/
+        }
+    }
 }
 
 void endMenuUpdate(sf::Time) {
@@ -360,9 +413,30 @@ void endMenuUpdate(sf::Time) {
 
 void endMenuDraw() {
 
-    //window.clear();
 
-    //window.display();
+    window.clear();
+    window.draw(background, &darkenShader);
+    window.draw(leaderboardText);
+
+    static sf::Text entryText(font, "", 40);
+    entryText.setFillColor(sf::Color::White);
+
+    float startX = screen_width / 2.f - 300.f;
+    float startY = screen_height / 2.f - 200.f;
+
+    for (size_t i = 0; i < leaderboardScores.size() && i < 10; ++i) {
+
+        std::string text =
+            std::to_string(i + 1) + ". " +
+            leaderboardScores[i].playerName + " ..... " + std::to_string(leaderboardScores[i].score);
+
+        entryText.setString(text);
+        entryText.setPosition({ startX, startY + i * 50.f });
+
+        window.draw(entryText);
+    }
+
+    window.display();
 }
 
 
@@ -378,13 +452,10 @@ GameState states[] = {
 
 int main() {
 
-    unsigned int screen_width = 1920;
-    unsigned int screen_height = 1080;
-
     window = sf::RenderWindow(sf::VideoMode({ screen_width, screen_height }), "Gierka");
     window.setFramerateLimit(60);
 
-    if (!play_texture.loadFromFile("Resources/Images/Sprites/Graj.png") ||
+    if(!play_texture.loadFromFile("Resources/Images/Sprites/Graj.png") ||
         !settings_texture.loadFromFile("Resources/Images/Sprites/Ustawienia.png") ||
         !leave_texture.loadFromFile("Resources/Images/Sprites/Wyjdz.png") ||
         !background_texture.loadFromFile("Resources/Images/Backgrounds/tlo.jpg") ||
@@ -394,7 +465,9 @@ int main() {
         !sfx_texture.loadFromFile("Resources/Images/Sprites/sfx.png") ||
         !resume_texture.loadFromFile("Resources/Images/Sprites/wznow.png") ||
         !pause_texture.loadFromFile("Resources/Images/Sprites/pauza.png") ||
+        !leaderboard_texture.loadFromFile("Resources/Images/Sprites/leaderboard.png") ||
         !music.openFromFile("Resources/Sounds/music.wav") ||
+        !font.openFromFile("Resources/Fonts/PixelifySans.ttf") ||
         !darkenShader.loadFromFile("Resources/Shaders/darken.frag", sf::Shader::Type::Fragment) ||
         !redFilterShader.loadFromFile("Resources/Shaders/redFilter.frag", sf::Shader::Type::Fragment)) {
 
@@ -414,6 +487,7 @@ int main() {
     sfx_button = sf::Sprite(sfx_texture);
     resume = sf::Sprite(resume_texture);
     pause = sf::Sprite(pause_texture);
+    leaderboardText = sf::Sprite(leaderboard_texture);
 
     //ustawienie srodkow
     centerOrigin(play_button, play_texture);
@@ -425,6 +499,8 @@ int main() {
     centerOrigin(back, back_texture);
     centerOrigin(resume, resume_texture);
     centerOrigin(pause, pause_texture);
+    centerOrigin(leaderboardText, leaderboard_texture);
+
 
     //pozycje
     int move_buttons = 2 * settings_texture.getSize().y;
@@ -441,6 +517,8 @@ int main() {
     resume.setPosition(play_button.getPosition());
     pause.setPosition(volume.getPosition());
 
+    leaderboardText.setPosition(pause.getPosition());
+
     //petla programu
     currentState = GameStateID::MENU;
     sf::Clock clock;
@@ -448,15 +526,16 @@ int main() {
     music.setLooping(true);
     music.play();
 
-    while (window.isOpen()) {
+    while(window.isOpen()) {
         sf::Time dt = clock.restart();
 
-        while (auto event = window.pollEvent())
+        while(auto event = window.pollEvent())
             states[(int)currentState].handleEvent(*event);
 
         states[(int)currentState].update(dt);
         states[(int)currentState].draw();
 
     }
+
     return 0;
 }
