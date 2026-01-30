@@ -2,6 +2,13 @@
 #include <SFML/Audio.hpp>
 #include <iostream>
 #include <fstream>
+#include <SFML/Graphics/RenderTarget.hpp>
+#include <iostream>
+#include "map/Map.hpp"
+#include "map/map_renderer/MapRenderer.hpp"
+#include "enemy/EnemyManager.hpp"
+#include "map/exit_renderer/ExitRenderer.hpp"
+#include "map/respawn_renderer/RespawnRenderer.hpp"
 
 enum class GameStateID {
     MENU,
@@ -12,10 +19,11 @@ enum class GameStateID {
 };
 
 struct GameState {
-    void (*handleEvent)(const sf::Event&);
-    void (*update)(sf::Time);
-    void (*draw)();
+    void (*handleEvent)(const sf::Event&, sf::RenderWindow&);
+    void (*update)(sf::Time, sf::RenderWindow&);
+    void (*draw)(sf::RenderWindow&);
 };
+
 
 struct Slider {
     sf::RectangleShape bar;
@@ -31,10 +39,31 @@ struct ScoreEntry {
     int score;
 };
 
+struct Bullet
+{
+    sf::Sprite sprite;
+    sf::Vector2f velocity;
+
+    Bullet(const sf::Texture& tex,
+        sf::Vector2f position,
+        sf::Vector2f vel)
+        : sprite(tex), velocity(vel)
+    {
+        sprite.setOrigin(
+            { tex.getSize().x / 2.f,
+            tex.getSize().y / 2.f }
+        );
+        sprite.setPosition(position);
+    }
+};
+
+std::vector<Bullet> bullets;
+const float bulletSpeed = 1000.f;
+int points = 0;
+
 const unsigned int screen_width = 1920;
 const unsigned int screen_height = 1080;
 
-sf::RenderWindow window;
 
 GameStateID currentState;
 GameStateID previousState;
@@ -73,170 +102,11 @@ std::vector<ScoreEntry> leaderboardScores;
 
 Slider volumeSlider;
 
-bool compareScores(const ScoreEntry& a, const ScoreEntry& b) {
-    return a.score > b.score;
-}
-
-void saveScoreToFile(std::string& name, int score) {
-    std::fstream file("Resources/leaderboard.txt", std::ios::app);
-
-    if (file.is_open()) {
-        file << name << " " << score << "\n";
-        file.close();
-    }
-    else {
-        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
-    }
-}
-
-std::vector<ScoreEntry> loadLeaderboard() {
-
-    std::vector<ScoreEntry> scores;
-    std::ifstream file("Resources/leaderboard.txt");
-
-    if(!file.is_open()) {
-        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
-        return scores;
-    }
-
-    std::string name;
-    int score;
-
-    while (file >> name >> score) {
-
-        ScoreEntry entry;
-        entry.playerName = name;
-        entry.score = score;
-        scores.push_back(entry);
-    }
-
-    file.close();
-
-    std::sort(scores.begin(), scores.end(), compareScores);
-
-    return scores;
-}
-
-void initVolumeSlider(float x, float y, float width) {
-
-    volumeSlider.bar.setSize({ width, 6.f });
-    volumeSlider.bar.setFillColor(sf::Color::White);
-    volumeSlider.bar.setPosition({ x, y });
-
-    volumeSlider.knob.setRadius(10.f);
-    volumeSlider.knob.setOrigin({ 10.f, 10.f });
-    volumeSlider.knob.setFillColor(sf::Color::Cyan);
-    volumeSlider.knob.setPosition({ x + width, y + 3.f });
-
-    volumeSlider.minX = x;
-    volumeSlider.maxX = x + width;
-    volumeSlider.value = 100.f;
-    volumeSlider.dragging = false;
-}
-
-void handleSliderEvent(const sf::Event& event) {
-
-    if(event.is<sf::Event::MouseButtonPressed>()) {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-
-        if(mouse->button == sf::Mouse::Button::Left) {
-            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-            if(volumeSlider.knob.getGlobalBounds().contains(mousePos))
-                volumeSlider.dragging = true;
-        }
-    }
-
-    if(event.is<sf::Event::MouseButtonReleased>()) {
-        auto mouse = event.getIf<sf::Event::MouseButtonReleased>();
-
-        if (mouse->button == sf::Mouse::Button::Left)
-            volumeSlider.dragging = false;
-    }
-
-    if(event.is<sf::Event::MouseMoved>() && volumeSlider.dragging) {
-        float mouseX = window.mapPixelToCoords(sf::Mouse::getPosition(window)).x;
-
-        if (mouseX < volumeSlider.minX) mouseX = volumeSlider.minX;
-        if (mouseX > volumeSlider.maxX) mouseX = volumeSlider.maxX;
-
-        volumeSlider.knob.setPosition({ mouseX, volumeSlider.knob.getPosition().y });
-
-        float t = (mouseX - volumeSlider.minX) / (volumeSlider.maxX - volumeSlider.minX);
-        volumeSlider.value = t * 100.f;
-    }
-}
-
-void updateVolumeSlider(sf::Music& music) {
-    music.setVolume(volumeSlider.value);
-}
-
-void centerOrigin(sf::Sprite &sprite, sf::Texture &texture) {
-    sprite.setOrigin({ texture.getSize().x / 2.f, texture.getSize().y / 2.f });
-}
-
-void menuHandleEvent(const sf::Event& event) {
-
-    if(event.is<sf::Event::Closed>())
-        window.close();
-
-    if(event.is<sf::Event::MouseButtonPressed>()) {
-        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
-
-        if(mouse->button == sf::Mouse::Button::Left) {
-            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-
-            if(play_button.getGlobalBounds().contains(mousePos))
-                currentState = GameStateID::GAMEPLAY;
-
-            if(settings_button.getGlobalBounds().contains(mousePos)) {
-                previousState = currentState;
-                currentState = GameStateID::SETTINGS;
-            }
-
-            if(leave_button.getGlobalBounds().contains(mousePos))
-#include <SFML/Graphics/RenderTarget.hpp>
-#include <iostream>
-#include "map/Map.hpp"
-#include "map/map_renderer/MapRenderer.hpp"
-#include "enemy/EnemyManager.hpp"
-#include "map/exit_renderer/ExitRenderer.hpp"
-#include "map/respawn_renderer/RespawnRenderer.hpp"
-
-struct Bullet
-{
-    sf::Sprite sprite;
-    sf::Vector2f velocity;
-
-    Bullet(const sf::Texture& tex,
-        sf::Vector2f position,
-        sf::Vector2f vel)
-        : sprite(tex), velocity(vel)
-    {
-        sprite.setOrigin(
-            { tex.getSize().x / 2.f,
-            tex.getSize().y / 2.f }
-        );        
-        sprite.setPosition(position);
-    }
-};
-
-struct EnemyBullet{};
-
-
-std::vector<Bullet> bullets;
-const float bulletSpeed = 1000.f;
-int points = 0;
-
-std::vector<EnemyBullet> enemyBullets;
-
-//std::vector<Enemy> enemys;
-
 sf::Clock shootClock;
 const float shootDelay = 0.15f;
 sf::View m_view;
 
-MapGenerator m_map(100,100);
+MapGenerator m_map(100, 100);
 MapRenderer m_renderer(m_map);
 EnemyManager m_enemyManager;
 ExitRenderer m_exitRenderer(32.f);
@@ -336,7 +206,7 @@ void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, fl
         gun.setScale(sf::Vector2f(1.f, -1.f));
         player.setScale(sf::Vector2f(-1.f, 1.f));
     }
-    else{
+    else {
         gun.setScale(sf::Vector2f(1.f, 1.f));
         player.setScale(sf::Vector2f(1.f, 1.f));
     }
@@ -344,16 +214,16 @@ void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, fl
 }
 
 void shoot(std::vector<Bullet>& bullets,
-           const sf::Sprite& gun,
-           const sf::Sprite& player,
-           const sf::RenderWindow& window,
-           const sf::Texture& bulletTexture)
+    const sf::Sprite& gun,
+    const sf::Sprite& player,
+    const sf::RenderWindow& window,
+    const sf::Texture& bulletTexture)
 {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     sf::Vector2f worldPos = window.mapPixelToCoords(mousePos);
     sf::Vector2f dir = worldPos - player.getPosition();
     dir = dir.normalized();
-    
+
 
     bullets.emplace_back(
         bulletTexture,
@@ -399,8 +269,6 @@ bool bulletHitsEnemy(const Bullet& bullet, EnemyManager& enemyManager)
     return false;
 }
 
-
-
 void updateBullets(
     std::vector<Bullet>& bullets,
     float dt,
@@ -426,13 +294,11 @@ void updateBullets(
     }
 }
 
-
 void drawBullets(sf::RenderWindow& window, const std::vector<Bullet>& bullets)
 {
     for (const auto& b : bullets)
         window.draw(b.sprite);
 }
-
 
 static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf::Sprite& gun)
 {
@@ -440,7 +306,7 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     window.setView(m_view);
     window.draw(player);
     window.draw(gun);
-    drawBullets(window, bullets);   
+    drawBullets(window, bullets);
     m_enemyManager.draw(window, player);
     m_exitRenderer.draw(window, m_map);
     m_respawnRenderer.draw(window, m_map);
@@ -448,75 +314,129 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     window.display();
 }
 
+bool compareScores(const ScoreEntry& a, const ScoreEntry& b) {
+    return a.score > b.score;
+}
 
-int main()
-{
-    std::srand(static_cast<unsigned>(std::time(nullptr))); //wa¿ne ¿eby losowe genrowanie dzia³a³o
+void saveScoreToFile(std::string& name, int score) {
+    std::fstream file("Resources/leaderboard.txt", std::ios::app);
 
-    sf::RenderWindow window(sf::VideoMode({ 1920, 1080 }), "Simple call!");
-    sf::Texture playerTexture;
-    if (!playerTexture.loadFromFile("images/test-player.png")) {
-        std::cerr << "Failed to load image\n";
+    if (file.is_open()) {
+        file << name << " " << score << "\n";
+        file.close();
     }
-    sf::Sprite player(playerTexture);
-    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));    
-    player.setPosition(sf::Vector2f(960.f, 540.f));
-
-    sf::Texture gunTexture;
-    if (!gunTexture.loadFromFile("images/gun.png")) {
-        std::cerr << "Failed to load image\n";        
+    else {
+        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
     }
-    sf::Sprite gun(gunTexture);
-    gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));    
+}
 
-    sf::Texture bulletTexture;
-    if (!bulletTexture.loadFromFile("images/bullet.png")) {
-        std::cerr << "Failed to load image\n";
+std::vector<ScoreEntry> loadLeaderboard() {
+
+    std::vector<ScoreEntry> scores;
+    std::ifstream file("Resources/leaderboard.txt");
+
+    if(!file.is_open()) {
+        std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
+        return scores;
     }
 
-    /*sf::Texture enemyTexture;
-    if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
-        std::cerr << "Failed to load image\n";
-    }*/
-    //Enemy enemy(enemyTexture, { 960.f, 540.f });
+    std::string name;
+    int score;
 
-    
+    while (file >> name >> score) {
 
-    sf::Clock clock;
-    const float speedMultiplier = 300.f;
-    const float gunDistance = 15.0f;
+        ScoreEntry entry;
+        entry.playerName = name;
+        entry.score = score;
+        scores.push_back(entry);
+    }
 
-    float totalWidth = 100 * 32.0f;
-    float totalHeight = 100 * 32.0f;
+    file.close();
 
-    m_view.setSize({ 1920, 1080 });
-    //m_view.zoom(0.2f);
-    
-    m_map.reset();
-    m_enemyManager.spawnFromMap(m_map, 32.f);
-    respawnPlayer(player, m_map, 32.f);
+    std::sort(scores.begin(), scores.end(), compareScores);
 
-    while (window.isOpen())
-    {
-        float dt = clock.restart().asSeconds();
+    return scores;
+}
 
-        while (const std::optional event = window.pollEvent())
-        {
-            if (event->is<sf::Event::Closed>())
+void initVolumeSlider(float x, float y, float width) {
+
+    volumeSlider.bar.setSize({ width, 6.f });
+    volumeSlider.bar.setFillColor(sf::Color::White);
+    volumeSlider.bar.setPosition({ x, y });
+
+    volumeSlider.knob.setRadius(10.f);
+    volumeSlider.knob.setOrigin({ 10.f, 10.f });
+    volumeSlider.knob.setFillColor(sf::Color::Cyan);
+    volumeSlider.knob.setPosition({ x + width, y + 3.f });
+
+    volumeSlider.minX = x;
+    volumeSlider.maxX = x + width;
+    volumeSlider.value = 100.f;
+    volumeSlider.dragging = false;
+}
+
+void handleSliderEvent(const sf::Event& event, sf::RenderWindow& window) {
+
+    if(event.is<sf::Event::MouseButtonPressed>()) {
+        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
+
+        if(mouse->button == sf::Mouse::Button::Left) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+            if(volumeSlider.knob.getGlobalBounds().contains(mousePos))
+                volumeSlider.dragging = true;
+        }
+    }
+
+    if(event.is<sf::Event::MouseButtonReleased>()) {
+        auto mouse = event.getIf<sf::Event::MouseButtonReleased>();
+
+        if (mouse->button == sf::Mouse::Button::Left)
+            volumeSlider.dragging = false;
+    }
+
+    if(event.is<sf::Event::MouseMoved>() && volumeSlider.dragging) {
+        float mouseX = window.mapPixelToCoords(sf::Mouse::getPosition(window)).x;
+
+        if (mouseX < volumeSlider.minX) mouseX = volumeSlider.minX;
+        if (mouseX > volumeSlider.maxX) mouseX = volumeSlider.maxX;
+
+        volumeSlider.knob.setPosition({ mouseX, volumeSlider.knob.getPosition().y });
+
+        float t = (mouseX - volumeSlider.minX) / (volumeSlider.maxX - volumeSlider.minX);
+        volumeSlider.value = t * 100.f;
+    }
+}
+
+void updateVolumeSlider(sf::Music& music) {
+    music.setVolume(volumeSlider.value);
+}
+
+void centerOrigin(sf::Sprite &sprite, sf::Texture &texture) {
+    sprite.setOrigin({ texture.getSize().x / 2.f, texture.getSize().y / 2.f });
+}
+
+void menuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
+
+    if (event.is<sf::Event::Closed>())
+        window.close();
+
+    if (event.is<sf::Event::MouseButtonPressed>()) {
+        auto mouse = event.getIf<sf::Event::MouseButtonPressed>();
+
+        if (mouse->button == sf::Mouse::Button::Left) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+            if (play_button.getGlobalBounds().contains(mousePos))
+                currentState = GameStateID::GAMEPLAY;
+
+            if (settings_button.getGlobalBounds().contains(mousePos)) {
+                previousState = currentState;
+                currentState = GameStateID::SETTINGS;
+            }
+
+            if (leave_button.getGlobalBounds().contains(mousePos))
                 window.close();
-
-            //if (const auto* k = event->getIf<sf::Event::KeyPressed>()) {
-
-            //    if (k->code == sf::Keyboard::Key::Space) {
-            //        m_map.reset();
-            //        /*m_enemyManager.spawnFromMap(m_map, TILE_SIZE);*/
-
-            //        /*for (auto& s : m_map.enemySpawns) {
-            //            m_enemies.push_back({ s.x, s.y });
-            //        }*/
-            //    }
-
-            //}
         }
     }
 
@@ -528,12 +448,12 @@ int main()
     }
 }
 
-void drawVolumeSlider() {
+void drawVolumeSlider(sf::RenderWindow& window) {
     window.draw(volumeSlider.bar);
     window.draw(volumeSlider.knob);
 }
 
-void menuUpdate(sf::Time) {
+void menuUpdate(sf::Time, sf::RenderWindow& window) {
 
     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -552,7 +472,7 @@ void menuUpdate(sf::Time) {
         leave_button.setScale({ 1.f,1.f });
 }
 
-void menuDraw() {
+void menuDraw(sf::RenderWindow& window) {
 
     window.clear();
     window.draw(background);
@@ -562,7 +482,7 @@ void menuDraw() {
     window.display();
 }
 
-void gameHandleEvent(const sf::Event& event) {
+void gameHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 
     if(event.is<sf::Event::Closed>())
         window.close();
@@ -582,15 +502,15 @@ void gameHandleEvent(const sf::Event& event) {
     }
 }
 
-void gameUpdate(sf::Time) {}
+void gameUpdate(sf::Time, sf::RenderWindow& window) {}
 
-void gameDraw() {
+void gameDraw(sf::RenderWindow& window) {
 
     window.clear(sf::Color::Black);
     window.display();
 }
 
-void settingsHandleEvent(const sf::Event& event) {
+void settingsHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 
     if(event.is<sf::Event::Closed>())
         window.close();
@@ -617,10 +537,10 @@ void settingsHandleEvent(const sf::Event& event) {
             currentState = previousState;
     }
 
-    handleSliderEvent(event);
+    handleSliderEvent(event, window);
 }
 
-void settingsUpdate(sf::Time) {
+void settingsUpdate(sf::Time, sf::RenderWindow& window) {
 
     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -632,7 +552,7 @@ void settingsUpdate(sf::Time) {
     updateVolumeSlider(music);
 }
 
-void settingsDraw() {
+void settingsDraw(sf::RenderWindow& window) {
 
     window.clear();
     window.draw(background, &darkenShader);
@@ -640,11 +560,11 @@ void settingsDraw() {
     window.draw(music_button);
     window.draw(sfx_button);
     window.draw(back);
-    drawVolumeSlider();
+    drawVolumeSlider(window);
     window.display();
 }
 
-void pauseMenuHandleEvent(const sf::Event& event) {
+void pauseMenuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 
     if(event.is<sf::Event::Closed>())
         window.close();
@@ -675,14 +595,15 @@ void pauseMenuHandleEvent(const sf::Event& event) {
     if(event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if(key->scancode == sf::Keyboard::Scan::Escape)
+        if (key->scancode == sf::Keyboard::Scan::Escape) {
             music.play();
             currentState = GameStateID::GAMEPLAY;
+        }
     }
 
 }
 
-void pauseMenuUpdate(sf::Time) {
+void pauseMenuUpdate(sf::Time, sf::RenderWindow& window) {
 
     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -702,7 +623,7 @@ void pauseMenuUpdate(sf::Time) {
 
 }
 
-void pauseMenuDraw() {
+void pauseMenuDraw(sf::RenderWindow& window) {
 
     window.clear();
     window.draw(background, &redFilterShader);
@@ -713,7 +634,7 @@ void pauseMenuDraw() {
     window.display();
 }
 
-void endMenuHandleEvent(const sf::Event& event) {
+void endMenuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 
     if (event.is<sf::Event::Closed>())
         window.close();
@@ -727,12 +648,12 @@ void endMenuHandleEvent(const sf::Event& event) {
     }
 }
 
-void endMenuUpdate(sf::Time) {
+void endMenuUpdate(sf::Time, sf::RenderWindow& window) {
 
     //sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window)); // end menu
 }
 
-void endMenuDraw() {
+void endMenuDraw(sf::RenderWindow& window) {
 
 
     window.clear();
@@ -771,12 +692,11 @@ GameState states[] = {
 };
 
 
-int main() {
+int main()
+{
+    std::srand(static_cast<unsigned>(std::time(nullptr))); //wa¿ne ¿eby losowe genrowanie dzia³a³o
 
-    window = sf::RenderWindow(sf::VideoMode({ screen_width, screen_height }), "Gierka");
-    window.setFramerateLimit(60);
-
-    if(!play_texture.loadFromFile("Resources/Images/Sprites/Graj.png") ||
+    if (!play_texture.loadFromFile("Resources/Images/Sprites/Graj.png") ||
         !settings_texture.loadFromFile("Resources/Images/Sprites/Ustawienia.png") ||
         !leave_texture.loadFromFile("Resources/Images/Sprites/Wyjdz.png") ||
         !background_texture.loadFromFile("Resources/Images/Backgrounds/tlo.jpg") ||
@@ -822,8 +742,10 @@ int main() {
     centerOrigin(pause, pause_texture);
     centerOrigin(leaderboardText, leaderboard_texture);
 
+    sf::RenderWindow window(sf::VideoMode({ screen_height, screen_width }), "Simple call!");
+    sf::Texture playerTexture;
 
-    //pozycje
+    window.setFramerateLimit(60);
     int move_buttons = 2 * settings_texture.getSize().y;
 
     play_button.setPosition({ screen_width / 2.f, screen_height / 2.f - move_buttons });
@@ -834,6 +756,46 @@ int main() {
     music_button.setPosition({ screen_width / 2.f - music_texture.getSize().x * 1.1f, screen_height / 2.f - music_texture.getSize().y });
     sfx_button.setPosition({ screen_width / 2.f - music_texture.getSize().x * 1.1f, screen_height / 2.f + sfx_texture.getSize().y });
     back.setPosition({ screen_width / 2.f, screen_height - back_texture.getSize().y * 1.6f });
+    if (!playerTexture.loadFromFile("images/test-player.png")) {
+        std::cerr << "Failed to load image\n";
+    }
+    sf::Sprite player(playerTexture);
+    player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));
+    player.setPosition(sf::Vector2f(960.f, 540.f));
+
+    sf::Texture gunTexture;
+    if (!gunTexture.loadFromFile("images/gun.png")) {
+        std::cerr << "Failed to load image\n";
+    }
+    sf::Sprite gun(gunTexture);
+    gun.setOrigin(sf::Vector2f(gunTexture.getSize().x / 2.f, gunTexture.getSize().y / 2.f));
+
+    sf::Texture bulletTexture;
+    if (!bulletTexture.loadFromFile("images/bullet.png")) {
+        std::cerr << "Failed to load image\n";
+    }
+
+    /*sf::Texture enemyTexture;
+    if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
+        std::cerr << "Failed to load image\n";
+    }*/
+    //Enemy enemy(enemyTexture, { 960.f, 540.f });
+
+
+
+    sf::Clock clock;
+    const float speedMultiplier = 300.f;
+    const float gunDistance = 15.0f;
+
+    float totalWidth = 100 * 32.0f;
+    float totalHeight = 100 * 32.0f;
+
+    m_view.setSize({ 1920, 1080 });
+    //m_view.zoom(0.2f);
+
+    m_map.reset();
+    m_enemyManager.spawnFromMap(m_map, 32.f);
+    respawnPlayer(player, m_map, 32.f);
 
     resume.setPosition(play_button.getPosition());
     pause.setPosition(volume.getPosition());
@@ -841,39 +803,51 @@ int main() {
     leaderboardText.setPosition(pause.getPosition());
 
     //petla programu
-    currentState = GameStateID::MENU;
-    sf::Clock clock;
+    currentState = GameStateID::MENU;    
 
     music.setLooping(true);
     music.play();
 
-    while(window.isOpen()) {
-        sf::Time dt = clock.restart();
+    while (window.isOpen())
+    {
+        sf::Time dtTime = clock.restart();
+        float dt = dtTime.asSeconds();
 
-        while(auto event = window.pollEvent())
-            states[(int)currentState].handleEvent(*event);
+        while (const std::optional event = window.pollEvent())
+        {
+            states[(int)currentState].handleEvent(*event, window);
+            if (event->is<sf::Event::Closed>())
+                window.close();
 
-        states[(int)currentState].update(dt);
-        states[(int)currentState].draw();
+            //if (const auto* k = event->getIf<sf::Event::KeyPressed>()) {
 
-    }
+            //    if (k->code == sf::Keyboard::Key::Space) {
+            //        m_map.reset();
+            //        /*m_enemyManager.spawnFromMap(m_map, TILE_SIZE);*/
 
-    return 0;
+            //        /*for (auto& s : m_map.enemySpawns) {
+            //            m_enemies.push_back({ s.x, s.y });
+            //        }*/
+            //    }
+
+            //}
+        }
+        states[(int)currentState].update(dtTime, window);
+        states[(int)currentState].draw(window);
         sf::Vector2f movement = getPlayerInput();
 
         if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) &&
             shootClock.getElapsedTime().asSeconds() > shootDelay)
-        {            
+        {
             shoot(bullets, gun, player, window, bulletTexture);
             shootClock.restart();
-        }
-        //updateEnemy(enemy, dt);
-        
+        }        
+
         updatePlayer(player, movement, dt, speedMultiplier, m_map);
         m_view.setCenter(player.getPosition());
         updateGun(gun, player, window, gunDistance);
-        updateBullets(bullets, dt, m_map);
-        //drawEnemy(enemy, window);
+        updateBullets(bullets, dt, m_map);        
         render(window, player, gun);
+
     }
 }
