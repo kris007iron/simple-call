@@ -373,6 +373,7 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
 void resetGameplay()
 {
     points = 0; 
+    //health = 20;
     bullets.clear();
     m_enemyManager.clear();
     m_map.reset();
@@ -495,9 +496,10 @@ void menuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
         if (mouse->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
-            if (play_button.getGlobalBounds().contains(mousePos))
+            if (play_button.getGlobalBounds().contains(mousePos)) {
                 resetGameplay();
                 currentState = GameStateID::GAMEPLAY;
+            }
 
             if (settings_button.getGlobalBounds().contains(mousePos)) {
                 previousState = currentState;
