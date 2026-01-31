@@ -5,7 +5,7 @@
 
 class EnemyManager {
 public:
-    void spawnFromMap(const MapGenerator& map, float tileSize);
+    void spawnFromMap(const MapGenerator& map, float tileSize, int lvl);
     void clear();    
     void draw(sf::RenderWindow& window, const sf::Sprite& player);
     std::vector<Enemy>& getEnemies();

@@ -1,7 +1,7 @@
 #include "EnemyManager.hpp"
 #include <SFML/Graphics.hpp>
 #include <iostream>
-void EnemyManager::spawnFromMap(const MapGenerator& map, float tileSize) {
+void EnemyManager::spawnFromMap(const MapGenerator& map, float tileSize, int lvl) {
     m_enemies.clear();
     
     if (!enemyTexture.loadFromFile("images/test-enemy.png")) {
@@ -15,6 +15,11 @@ void EnemyManager::spawnFromMap(const MapGenerator& map, float tileSize) {
     for (const auto& s : map.enemySpawns) {
         m_enemies.emplace_back(s.x, s.y, tileSize, enemyTexture, knifeTexture);
         //std::cout << "enemy drew";
+    }
+    if (lvl > 1) {
+        for (Enemy e : m_enemies) {
+            e.setSpeed(180.f + lvl * 10.f);
+        }
     }
 }
 

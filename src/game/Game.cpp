@@ -18,7 +18,7 @@ Game::Game()
     m_view.setCenter({ totalWidth / 2.0f, totalHeight / 2.0f });
 
     m_map.reset();
-    m_enemyManager.spawnFromMap(m_map, TILE_SIZE);
+    m_enemyManager.spawnFromMap(m_map, TILE_SIZE,1);
 }
 
 
@@ -44,7 +44,7 @@ void Game::processEvents() {
          
             if (k->code == sf::Keyboard::Key::Space) {
                 m_map.reset();
-                m_enemyManager.spawnFromMap(m_map, TILE_SIZE);
+                m_enemyManager.spawnFromMap(m_map, TILE_SIZE, 1);
 
                 for (auto& s : m_map.enemySpawns) {
                     m_enemies.push_back({ s.x, s.y });

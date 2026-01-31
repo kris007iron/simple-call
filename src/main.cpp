@@ -10,7 +10,7 @@
 #include "map/exit_renderer/ExitRenderer.hpp"
 #include "map/respawn_renderer/RespawnRenderer.hpp"
 
-std::string nick = "Admin";
+std::string nick = "Student";
 
 enum class GameStateID {
     MENU,
@@ -62,7 +62,7 @@ struct Bullet
 std::vector<Bullet> bullets;
 const float bulletSpeed = 1000.f;
 int points = 0;
-
+int lvl = 1;
 
 const unsigned int screen_width = 1920;
 const unsigned int screen_height = 1080;
@@ -160,7 +160,7 @@ bool playerTouchesExit(const sf::Sprite& player, const MapGenerator& map)
     sf::FloatRect playerBox = getPlayerHitbox(player);
 
     for (const auto& exit : map.exits)
-    {
+    {        
         sf::FloatRect exitBox(
             sf::Vector2f(exit.x * 32.f, exit.y * 32.f),
             sf::Vector2f(32.f, 32.f)
@@ -168,7 +168,11 @@ bool playerTouchesExit(const sf::Sprite& player, const MapGenerator& map)
 
 
         if (playerBox.findIntersection(exitBox))
+        {
+            points += 10;
+            lvl++;
             return true;
+        }
     }
 
     return false;
@@ -194,7 +198,7 @@ void nextLevel()
 
     m_map.reset();
     m_enemyManager.clear();
-    m_enemyManager.spawnFromMap(m_map, 32);
+    m_enemyManager.spawnFromMap(m_map, 32, lvl);
 
     respawnPlayer(player, m_map, 32);
     m_view.setCenter(player.getPosition());
@@ -352,8 +356,7 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     
     
     debugCircle.setPosition(player.getPosition());
-    window.clear();
-    //window.draw(debugCircle);
+    window.clear();    
     window.setView(m_view);
     m_renderer.draw(window);
     drawBullets(window, bullets);
@@ -372,12 +375,12 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
 
 void resetGameplay()
 {
-    points = 0; 
-    //health = 20;
+    points = 0;     
+    lvl = 1;
     bullets.clear();
     m_enemyManager.clear();
     m_map.reset();
-    m_enemyManager.spawnFromMap(m_map, 32);
+    m_enemyManager.spawnFromMap(m_map, 32, lvl);
     respawnPlayer(player, m_map, 32.f);
     m_view.setCenter(player.getPosition());
     shootClock.restart();
@@ -605,6 +608,7 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
         saveScoreToFile(nick, points);
         leaderboardScores = loadLeaderboard();
         currentState = GameStateID::END_GAME;
+        m_enemyManager.setHealth(20);
         return;
     }
 
@@ -907,7 +911,7 @@ int main()
     m_view.zoom(.2f);
 
     m_map.reset();
-    m_enemyManager.spawnFromMap(m_map, 32.f);
+    m_enemyManager.spawnFromMap(m_map, 32.f, lvl);
     player = sf::Sprite(playerTexture);
     gun = sf::Sprite(gunTexture);
     player.setOrigin(sf::Vector2f(playerTexture.getSize().x / 2.f, playerTexture.getSize().y / 2.f));

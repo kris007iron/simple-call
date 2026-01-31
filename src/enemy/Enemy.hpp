@@ -15,12 +15,14 @@ public:
         alive = false;     
     };
     bool isAlive() const { return alive; }
-
+    void setSpeed(int n_speed) {
+        speed = n_speed;
+    };
 
 private:    
     sf::Sprite e_sprite;
     sf::Sprite e_knife;
     bool alive = true;
     float knifeDistance = 15.0f;
-    float speed = 200.f; //players is 300
+    float speed = 180.f; //players is 300
 };
