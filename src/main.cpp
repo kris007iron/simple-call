@@ -10,6 +10,8 @@
 #include "map/exit_renderer/ExitRenderer.hpp"
 #include "map/respawn_renderer/RespawnRenderer.hpp"
 
+std::string nick = "Admin";
+
 enum class GameStateID {
     MENU,
     GAMEPLAY,
@@ -244,13 +246,16 @@ void updateGun(sf::Sprite& gun, sf::Sprite& player, sf::RenderWindow& window, fl
     //for sprite flipping use negative scale values
     //we will calculate the angle of rotation based on our position vector
     gun.setRotation(playerToMouse.angle());
-    if (gun.getRotation().asDegrees() > 90.0f && gun.getRotation().asDegrees() < 270.0f) {
-        gun.setScale(sf::Vector2f(1.f, -1.f));
-        player.setScale(sf::Vector2f(-1.f, 1.f));
+
+    const float gunScale = 0.45f;
+
+    if (gun.getRotation().asDegrees() > 90.f && gun.getRotation().asDegrees() < 270.f) {
+        gun.setScale({ gunScale, -gunScale });
+        player.setScale({ -1.f, 1.f });
     }
     else {
-        gun.setScale(sf::Vector2f(1.f, 1.f));
-        player.setScale(sf::Vector2f(1.f, 1.f));
+        gun.setScale({ gunScale, gunScale });
+        player.setScale({ 1.f, 1.f });
     }
     gun.setPosition(player.getPosition() + playerToMouse.normalized() * gunDistance);
 }
@@ -365,6 +370,18 @@ static void render(sf::RenderWindow& window, const sf::Sprite& player, const sf:
     window.display();
 }
 
+void resetGameplay()
+{
+    points = 0; 
+    bullets.clear();
+    m_enemyManager.clear();
+    m_map.reset();
+    m_enemyManager.spawnFromMap(m_map, 32);
+    respawnPlayer(player, m_map, 32.f);
+    m_view.setCenter(player.getPosition());
+    shootClock.restart();
+}
+
 bool compareScores(const ScoreEntry& a, const ScoreEntry& b) {
     return a.score > b.score;
 }
@@ -384,7 +401,7 @@ void saveScoreToFile(std::string& name, int score) {
 std::vector<ScoreEntry> loadLeaderboard() {
 
     std::vector<ScoreEntry> scores;
-    std::ifstream file("Resources/leaderboard.txt");
+    std::fstream file("Resources/leaderboard.txt");
 
     if(!file.is_open()) {
         std::cerr << "ERROR LOADING LEADERBOARD.TXT\n";
@@ -479,7 +496,7 @@ void menuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
             if (play_button.getGlobalBounds().contains(mousePos))
-                //window.clear();
+                resetGameplay();
                 currentState = GameStateID::GAMEPLAY;
 
             if (settings_button.getGlobalBounds().contains(mousePos)) {
@@ -548,6 +565,7 @@ void gameHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
         }
 
         if (key->scancode == sf::Keyboard::Scan::Backspace) {
+            saveScoreToFile(nick, points);
             leaderboardScores = loadLeaderboard();
             currentState = GameStateID::END_GAME;
         }
@@ -579,6 +597,14 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
         levelChanging = true;
         nextLevel();
         levelChanging = false;
+    }
+
+    if (m_enemyManager.getHealth() <= 0)
+    {
+        saveScoreToFile(nick, points);
+        leaderboardScores = loadLeaderboard();
+        currentState = GameStateID::END_GAME;
+        return;
     }
 
     scoreText.setString("Score: " + std::to_string(points));
@@ -667,6 +693,7 @@ void pauseMenuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
 
             if(leave_button.getGlobalBounds().contains(mousePos)) {
                 music.play();
+                resetGameplay();
                 currentState = GameStateID::MENU;
             }
         }
@@ -722,7 +749,7 @@ void endMenuHandleEvent(const sf::Event& event, sf::RenderWindow& window) {
     if (event.is<sf::Event::KeyPressed>()) {
         auto key = event.getIf<sf::Event::KeyPressed>();
 
-        if (key->scancode == sf::Keyboard::Scan::Escape || key->scancode == sf::Keyboard::Scan::Enter) {
+        if (key->scancode == sf::Keyboard::Scan::Enter) {
             currentState = GameStateID::MENU;
         }
     }
@@ -735,7 +762,7 @@ void endMenuUpdate(sf::Time, sf::RenderWindow& window) {
 
 void endMenuDraw(sf::RenderWindow& window) {
 
-
+    window.setView(window.getDefaultView());
     window.clear();
     window.draw(background, &darkenShader);
     window.draw(leaderboardText);
@@ -750,7 +777,7 @@ void endMenuDraw(sf::RenderWindow& window) {
 
         std::string text =
             std::to_string(i + 1) + ". " +
-            leaderboardScores[i].playerName + " ..... " + std::to_string(leaderboardScores[i].score);
+            leaderboardScores[i].playerName + " " + std::to_string(leaderboardScores[i].score);
 
         entryText.setString(text);
         entryText.setPosition({ startX, startY + i * 50.f });
@@ -774,7 +801,7 @@ GameState states[] = {
 
 int main()
 {
-    std::srand(static_cast<unsigned>(std::time(nullptr))); //wa¿ne ¿eby losowe genrowanie dzia³a³o
+    std::srand(static_cast<unsigned>(std::time(nullptr))); 
 
     if (!play_texture.loadFromFile("Resources/Images/Sprites/Graj.png") ||
         !settings_texture.loadFromFile("Resources/Images/Sprites/Ustawienia.png") ||
@@ -809,6 +836,7 @@ int main()
     resume = sf::Sprite(resume_texture);
     pause = sf::Sprite(pause_texture);
     leaderboardText = sf::Sprite(leaderboard_texture);
+
 
     //ustawienie srodkow
     centerOrigin(play_button, play_texture);

@@ -50,3 +50,8 @@ add_custom_command(
             ${CMAKE_SOURCE_DIR}/src/Resources
             $<TARGET_FILE_DIR:main>/Resources
 )
+
+set_property(TARGET main PROPERTY
+    VS_DEBUGGER_WORKING_DIRECTORY
+    $<TARGET_FILE_DIR:main>
+)
