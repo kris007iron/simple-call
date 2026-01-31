@@ -601,8 +601,7 @@ void gameUpdate(sf::Time time, sf::RenderWindow& window) {
         levelChanging = false;
     }
 
-    if (m_enemyManager.getHealth() <= 0)
-    {
+    if (m_enemyManager.getHealth() <= 0) {
         saveScoreToFile(nick, points);
         leaderboardScores = loadLeaderboard();
         currentState = GameStateID::END_GAME;
